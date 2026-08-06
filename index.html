@@ -343,24 +343,20 @@
     </div>
 
     <script>
-       <script>
     // 绝对超级管理员昵称
-    const SUPER_ADMIN_NAME = "问彩蝶"; 
-
-    // 全服公共云端存储通道
-    const CLOUD_SYNC_URL = "https://kvdb.io/GodAndGoat2026_Final/global_state_v3";
+    const SUPER_ADMIN_NAME = "问彩蝶";
 
     let currentUser = null;
     let currentViewingUser = "";
     let pollTimer = null;
-    let globalData = { posts: [], admins: [], userProfiles: {} };
+    let adminsList = [];
     const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/bottts/svg?seed=goat";
 
     window.addEventListener('DOMContentLoaded', async () => {
         const savedUser = localStorage.getItem('soul_contract');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);
-            await syncCloudData();
+            await loadAdminsList();
             checkUserRole();
             if (!currentUser.hasFinishedPrologue) {
                 startPrologueGame(false);
@@ -370,36 +366,21 @@
         }
     });
 
-    async function syncCloudData() {
+    async function loadAdminsList() {
         try {
-            const res = await fetch(CLOUD_SYNC_URL);
+            const res = await fetch('/api/admins');
             if (res.ok) {
-                const data = await res.json();
-                if (data && typeof data === 'object') {
-                    globalData = {
-                        posts: data.posts || [],
-                        admins: data.admins || [],
-                        userProfiles: data.userProfiles || {}
-                    };
-                }
+                adminsList = await res.json();
             }
-        } catch(e) {}
-    }
-
-    async function pushCloudData() {
-        try {
-            await fetch(CLOUD_SYNC_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(globalData)
-            });
-        } catch(e) {}
+        } catch(e) {
+            console.error('Failed to load admins:', e);
+        }
     }
 
     function checkUserRole() {
         if (currentUser.nickname === SUPER_ADMIN_NAME) {
             currentUser.role = 'SUPER_ADMIN';
-        } else if (globalData.admins && globalData.admins.includes(currentUser.nickname)) {
+        } else if (adminsList && adminsList.includes(currentUser.nickname)) {
             currentUser.role = 'ADMIN';
         } else {
             currentUser.role = 'USER';
@@ -430,28 +411,36 @@
         const race = document.getElementById('reg-race').value;
         const email = document.getElementById('reg-email').value.trim();
 
-        await syncCloudData();
+        try {
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nickname, race, email })
+            });
 
-        if (globalData.userProfiles[nickname] && nickname !== SUPER_ADMIN_NAME) {
-            showModalMsg('该灵魂昵称已被使用！', 'error');
-            return;
+            const data = await res.json();
+
+            if (data.status === 'error') {
+                showModalMsg(data.message, 'error');
+                return;
+            }
+
+            currentUser = {
+                nickname, race, email,
+                avatar: data.avatar || DEFAULT_AVATAR,
+                hasFinishedPrologue: false,
+                album: []
+            };
+
+            await loadAdminsList();
+            checkUserRole();
+            localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+
+            document.getElementById('register-modal').classList.remove('active');
+            startPrologueGame(false);
+        } catch(e) {
+            showModalMsg('注册失败，请重试', 'error');
         }
-
-        currentUser = { 
-            nickname, race, email,
-            avatar: DEFAULT_AVATAR, 
-            hasFinishedPrologue: false,
-            album: []
-        };
-
-        globalData.userProfiles[nickname] = currentUser;
-        await pushCloudData();
-
-        checkUserRole();
-        localStorage.setItem('soul_contract', JSON.stringify(currentUser));
-
-        document.getElementById('register-modal').classList.remove('active');
-        startPrologueGame(false);
     }
 
     function enterDashboard() {
@@ -486,8 +475,15 @@
     }
 
     async function fetchAndRenderPosts() {
-        await syncCloudData();
-        renderPostsUI(globalData.posts);
+        try {
+            const res = await fetch('/api/posts');
+            if (res.ok) {
+                const posts = await res.json();
+                renderPostsUI(posts);
+            }
+        } catch(e) {
+            console.error('Failed to fetch posts:', e);
+        }
     }
 
     function renderPostsUI(posts) {
@@ -508,8 +504,8 @@
 
         const canDelete = (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN');
 
-        posts.forEach((p, index) => {
-            const adminControls = canDelete ? `<span class="admin-action-btn" onclick="deletePost(${index})">撤回</span>` : '';
+        posts.forEach((p) => {
+            const adminControls = canDelete ? `<span class="admin-action-btn" onclick="deletePost(${p.id})">撤回</span>` : '';
 
             body.insertAdjacentHTML('beforeend', `
                 <div class="post-item">
@@ -544,13 +540,20 @@
             time: new Date().toLocaleTimeString()
         };
 
-        globalData.posts.push(newPost);
-        if (globalData.posts.length > 60) globalData.posts.shift();
+        try {
+            const res = await fetch('/api/posts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newPost)
+            });
 
-        input.value = '';
-        renderPostsUI(globalData.posts);
-
-        try { await pushCloudData(); } catch(e) {}
+            if (res.ok) {
+                input.value = '';
+                await fetchAndRenderPosts();
+            }
+        } catch(e) {
+            console.error('Failed to send post:', e);
+        }
 
         setTimeout(() => {
             btn.innerText = '发送';
@@ -560,9 +563,18 @@
 
     async function deletePost(index) {
         if (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'ADMIN') return;
-        globalData.posts.splice(index, 1);
-        renderPostsUI(globalData.posts);
-        await pushCloudData();
+
+        try {
+            const res = await fetch(`/api/posts/${index}`, {
+                method: 'POST'
+            });
+
+            if (res.ok) {
+                await fetchAndRenderPosts();
+            }
+        } catch(e) {
+            console.error('Failed to delete post:', e);
+        }
     }
 
     /* 个人主页与相册功能 */
@@ -571,35 +583,45 @@
         const isOwner = (currentViewingUser === currentUser.nickname);
         const isSuperAdmin = (currentUser.role === 'SUPER_ADMIN');
 
-        let profile = globalData.userProfiles[currentViewingUser] || (isOwner ? currentUser : { nickname: currentViewingUser, race: '未知阵营', avatar: DEFAULT_AVATAR, album: [] });
+        fetch(`/api/users/${encodeURIComponent(currentViewingUser)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    alert('用户不存在');
+                    return;
+                }
 
-        const pfAvatar = document.getElementById('pf-avatar');
-        if (pfAvatar) pfAvatar.src = profile.avatar || DEFAULT_AVATAR;
-        
-        const pfNick = document.getElementById('pf-nickname');
-        if (pfNick) pfNick.innerText = profile.nickname;
-        
-        const pfRace = document.getElementById('pf-race');
-        if (pfRace) pfRace.innerText = profile.race;
-        
-        const pfRole = document.getElementById('pf-role');
-        if (pfRole) {
-            pfRole.innerText = profile.nickname === SUPER_ADMIN_NAME ? '绝对主神' : (globalData.admins.includes(profile.nickname) ? '管理者' : '普通玩家');
-        }
+                const profile = data.user;
 
-        const albumBtn = document.getElementById('album-upload-btn');
-        if (albumBtn) albumBtn.style.display = isOwner ? 'block' : 'none';
+                const pfAvatar = document.getElementById('pf-avatar');
+                if (pfAvatar) pfAvatar.src = profile.avatar || DEFAULT_AVATAR;
 
-        const resetBtn = document.getElementById('super-admin-reset-avatar-btn');
-        if (resetBtn) resetBtn.style.display = (isSuperAdmin && !isOwner) ? 'block' : 'none';
+                const pfNick = document.getElementById('pf-nickname');
+                if (pfNick) pfNick.innerText = profile.nickname;
 
-        const panel = document.getElementById('super-admin-panel');
-        if (panel) panel.style.display = (isSuperAdmin && isOwner) ? 'block' : 'none';
+                const pfRace = document.getElementById('pf-race');
+                if (pfRace) pfRace.innerText = profile.race;
 
-        renderAlbum(profile.album || []);
+                const pfRole = document.getElementById('pf-role');
+                if (pfRole) {
+                    pfRole.innerText = profile.nickname === SUPER_ADMIN_NAME ? '绝对主神' : (adminsList.includes(profile.nickname) ? '管理者' : '普通玩家');
+                }
 
-        const profModal = document.getElementById('profile-modal');
-        if (profModal) profModal.classList.add('active');
+                const resetBtn = document.getElementById('super-admin-reset-avatar-btn');
+                if (resetBtn) resetBtn.style.display = (isSuperAdmin && !isOwner) ? 'block' : 'none';
+
+                const panel = document.getElementById('super-admin-panel');
+                if (panel) panel.style.display = (isSuperAdmin && isOwner) ? 'block' : 'none';
+
+                const album = profile.album ? JSON.parse(profile.album) : [];
+                renderAlbum(album);
+
+                const profModal = document.getElementById('profile-modal');
+                if (profModal) profModal.classList.add('active');
+            })
+            .catch(e => {
+                console.error('Failed to load profile:', e);
+            });
     }
 
     function closeProfileCard() { 
@@ -621,10 +643,17 @@
                 currentUser.album.push(e.target.result);
                 localStorage.setItem('soul_contract', JSON.stringify(currentUser));
 
-                globalData.userProfiles[currentUser.nickname] = currentUser;
-                await pushCloudData();
+                try {
+                    await fetch(`/api/users/${encodeURIComponent(currentUser.nickname)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ album: JSON.stringify(currentUser.album) })
+                    });
 
-                openProfileCard(currentUser.nickname);
+                    openProfileCard(currentUser.nickname);
+                } catch(e) {
+                    console.error('Failed to upload album:', e);
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -658,44 +687,76 @@
 
     async function deleteAlbumImg(idx) {
         const isOwner = (currentViewingUser === currentUser.nickname);
-        let profile = globalData.userProfiles[currentViewingUser] || currentUser;
 
-        if (profile.album) {
-            profile.album.splice(idx, 1);
+        try {
+            const res = await fetch(`/api/users/${encodeURIComponent(currentViewingUser)}`);
+            const data = await res.json();
+
+            if (data.status === 'error') return;
+
+            const profile = data.user;
+            let album = profile.album ? JSON.parse(profile.album) : [];
+            album.splice(idx, 1);
+
+            await fetch(`/api/users/${encodeURIComponent(currentViewingUser)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ album: JSON.stringify(album) })
+            });
+
+            if (isOwner) {
+                currentUser.album = album;
+                localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+            }
+
+            openProfileCard(currentViewingUser);
+        } catch(e) {
+            console.error('Failed to delete album image:', e);
         }
-        if (isOwner) {
-            currentUser.album = profile.album;
-            localStorage.setItem('soul_contract', JSON.stringify(currentUser));
-        }
-        globalData.userProfiles[currentViewingUser] = profile;
-        await pushCloudData();
-        
-        openProfileCard(currentViewingUser);
     }
 
     async function superAdminResetAvatar() {
         if (currentUser.role !== 'SUPER_ADMIN') return;
-        if (globalData.userProfiles[currentViewingUser]) {
-            globalData.userProfiles[currentViewingUser].avatar = DEFAULT_AVATAR;
-            await pushCloudData();
+
+        try {
+            await fetch(`/api/users/${encodeURIComponent(currentViewingUser)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ avatar: DEFAULT_AVATAR })
+            });
+
+            document.getElementById('pf-avatar').src = DEFAULT_AVATAR;
+            alert(`已强行重置玩家 ${currentViewingUser} 的违规头像！`);
+        } catch(e) {
+            console.error('Failed to reset avatar:', e);
         }
-        document.getElementById('pf-avatar').src = DEFAULT_AVATAR;
-        alert(`已强行重置玩家 ${currentViewingUser} 的违规头像！`);
     }
 
     async function toggleAdminRole() {
         const targetName = document.getElementById('target-user-input').value.trim();
         if (!targetName) return alert('请输入玩家昵称！');
 
-        if (globalData.admins.includes(targetName)) {
-            globalData.admins = globalData.admins.filter(n => n !== targetName);
-            alert(`已撤销 ${targetName} 的管理者身份！`);
-        } else {
-            globalData.admins.push(targetName);
-            alert(`已成功赋予 ${targetName} 管理者身份！`);
+        try {
+            const res = await fetch('/api/admins', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nickname: targetName })
+            });
+
+            if (res.ok) {
+                await loadAdminsList();
+
+                if (adminsList.includes(targetName)) {
+                    alert(`已成功赋予 ${targetName} 管理者身份！`);
+                } else {
+                    alert(`已撤销 ${targetName} 的管理者身份！`);
+                }
+
+                document.getElementById('target-user-input').value = '';
+            }
+        } catch(e) {
+            console.error('Failed to toggle admin:', e);
         }
-        await pushCloudData();
-        document.getElementById('target-user-input').value = '';
     }
 
     function triggerAvatarUpload() { 
@@ -712,8 +773,15 @@
                 localStorage.setItem('soul_contract', JSON.stringify(currentUser));
                 document.getElementById('user-avatar-img').src = e.target.result;
 
-                globalData.userProfiles[currentUser.nickname] = currentUser;
-                await pushCloudData();
+                try {
+                    await fetch(`/api/users/${encodeURIComponent(currentUser.nickname)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ avatar: e.target.result })
+                    });
+                } catch(e) {
+                    console.error('Failed to update avatar:', e);
+                }
             };
             reader.readAsDataURL(file);
         }

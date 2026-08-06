@@ -5,32 +5,112 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use sqlx::{sqlite::SqlitePool, FromRow};
+use std::sync::Arc;
 use tower_http::services::ServeDir;
 
-// 1. 论坛发帖数据结构
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ForumPost {
+    pub id: i64,
     pub nickname: String,
     pub race: String,
-    pub avatar: Option<String>,
+    pub avatar: String,
     pub text: String,
     pub time: String,
 }
 
-// 共享的内存状态（用于全服保存论坛消息）
-type AppState = Arc<Mutex<Vec<ForumPost>>>;
+#[derive(Debug, Deserialize)]
+pub struct NewPost {
+    pub nickname: String,
+    pub race: String,
+    pub avatar: String,
+    pub text: String,
+    pub time: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct UserProfile {
+    pub nickname: String,
+    pub race: String,
+    pub email: String,
+    pub avatar: String,
+    pub role: String,
+    pub album: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RegisterData {
+    pub nickname: String,
+    pub race: String,
+    pub email: String,
+}
+
+type AppState = Arc<SqlitePool>;
 
 #[tokio::main]
 async fn main() {
-    let posts = Arc::new(Mutex::new(Vec::<ForumPost>::new()));
+    let pool = SqlitePool::connect("sqlite://./chat.db")
+        .await
+        .expect("Failed to connect to database");
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nickname TEXT NOT NULL,
+            race TEXT NOT NULL,
+            avatar TEXT NOT NULL,
+            text TEXT NOT NULL,
+            time TEXT NOT NULL
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to create posts table");
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS users (
+            nickname TEXT PRIMARY KEY,
+            race TEXT NOT NULL,
+            email TEXT NOT NULL,
+            avatar TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'USER',
+            album TEXT NOT NULL DEFAULT '[]'
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to create users table");
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS admins (
+            nickname TEXT PRIMARY KEY
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to create admins table");
+
+    println!("✅ 数据库初始化完成");
+
+    let state = Arc::new(pool);
 
     let app = Router::new()
         .route("/", get(home_page))
         .route("/about", get(about_page))
         .route("/api/posts", get(get_posts).post(add_post))
+        .route("/api/posts/:id", post(delete_post))
+        .route("/api/register", post(register_user))
+        .route("/api/users/:nickname", get(get_user))
+        .route("/api/users/:nickname", post(update_user))
+        .route("/api/admins", get(get_admins).post(toggle_admin))
         .nest_service("/static", ServeDir::new("static"))
-        .with_state(posts);
+        .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
@@ -40,118 +120,188 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-// 2. 论坛 API 处理函数：获取所有发言
-async fn get_posts(State(state): State<AppState>) -> Json<Vec<ForumPost>> {
-    let posts = state.lock().unwrap();
-    Json(posts.clone())
+async fn get_posts(State(pool): State<AppState>) -> Json<Vec<ForumPost>> {
+    let posts = sqlx::query_as::<_, ForumPost>("SELECT * FROM posts ORDER BY id DESC LIMIT 100")
+        .fetch_all(&*pool)
+        .await
+        .unwrap_or_default();
+    Json(posts)
 }
 
-// 3. 论坛 API 处理函数：发布新发言
 async fn add_post(
-    State(state): State<AppState>,
-    Json(new_post): Json<ForumPost>,
+    State(pool): State<AppState>,
+    Json(new_post): Json<NewPost>,
 ) -> Json<serde_json::Value> {
-    let mut posts = state.lock().unwrap();
-    posts.push(new_post);
-    // 保持最多 100 条全服最新发言
-    if posts.len() > 100 {
-        posts.remove(0);
+    let result = sqlx::query(
+        "INSERT INTO posts (nickname, race, avatar, text, time) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(&new_post.nickname)
+    .bind(&new_post.race)
+    .bind(&new_post.avatar)
+    .bind(&new_post.text)
+    .bind(&new_post.time)
+    .execute(&*pool)
+    .await;
+
+    match result {
+        Ok(_) => Json(serde_json::json!({ "status": "ok" })),
+        Err(e) => Json(serde_json::json!({ "status": "error", "message": e.to_string() })),
     }
+}
+
+async fn delete_post(
+    State(pool): State<AppState>,
+    axum::extract::Path(id): axum::extract::Path<i64>,
+) -> Json<serde_json::Value> {
+    let result = sqlx::query("DELETE FROM posts WHERE id = ?")
+        .bind(id)
+        .execute(&*pool)
+        .await;
+
+    match result {
+        Ok(_) => Json(serde_json::json!({ "status": "ok" })),
+        Err(e) => Json(serde_json::json!({ "status": "error", "message": e.to_string() })),
+    }
+}
+
+async fn register_user(
+    State(pool): State<AppState>,
+    Json(data): Json<RegisterData>,
+) -> Json<serde_json::Value> {
+    let default_avatar = "https://api.dicebear.com/7.x/bottts/svg?seed=goat";
+
+    let existing: Option<(String,)> = sqlx::query_as("SELECT nickname FROM users WHERE nickname = ?")
+        .bind(&data.nickname)
+        .fetch_optional(&*pool)
+        .await
+        .unwrap_or(None);
+
+    if existing.is_some() {
+        return Json(serde_json::json!({ "status": "error", "message": "昵称已被使用" }));
+    }
+
+    let result = sqlx::query(
+        "INSERT INTO users (nickname, race, email, avatar, role, album) VALUES (?, ?, ?, ?, 'USER', '[]')",
+    )
+    .bind(&data.nickname)
+    .bind(&data.race)
+    .bind(&data.email)
+    .bind(default_avatar)
+    .execute(&*pool)
+    .await;
+
+    match result {
+        Ok(_) => Json(serde_json::json!({ "status": "ok", "avatar": default_avatar })),
+        Err(e) => Json(serde_json::json!({ "status": "error", "message": e.to_string() })),
+    }
+}
+
+async fn get_user(
+    State(pool): State<AppState>,
+    axum::extract::Path(nickname): axum::extract::Path<String>,
+) -> Json<serde_json::Value> {
+    let user: Option<UserProfile> = sqlx::query_as("SELECT * FROM users WHERE nickname = ?")
+        .bind(&nickname)
+        .fetch_optional(&*pool)
+        .await
+        .unwrap_or(None);
+
+    let is_admin: Option<(String,)> = sqlx::query_as("SELECT nickname FROM admins WHERE nickname = ?")
+        .bind(&nickname)
+        .fetch_optional(&*pool)
+        .await
+        .unwrap_or(None);
+
+    match user {
+        Some(mut u) => {
+            if nickname == "问彩蝶" {
+                u.role = "SUPER_ADMIN".to_string();
+            } else if is_admin.is_some() {
+                u.role = "ADMIN".to_string();
+            }
+            Json(serde_json::json!({ "status": "ok", "user": u }))
+        },
+        None => Json(serde_json::json!({ "status": "error", "message": "用户不存在" })),
+    }
+}
+
+async fn update_user(
+    State(pool): State<AppState>,
+    axum::extract::Path(nickname): axum::extract::Path<String>,
+    Json(data): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    if let Some(avatar) = data.get("avatar").and_then(|v| v.as_str()) {
+        let result = sqlx::query("UPDATE users SET avatar = ? WHERE nickname = ?")
+            .bind(avatar)
+            .bind(&nickname)
+            .execute(&*pool)
+            .await;
+
+        if result.is_err() {
+            return Json(serde_json::json!({ "status": "error", "message": "更新头像失败" }));
+        }
+    }
+
+    if let Some(album) = data.get("album").and_then(|v| v.as_str()) {
+        let result = sqlx::query("UPDATE users SET album = ? WHERE nickname = ?")
+            .bind(album)
+            .bind(&nickname)
+            .execute(&*pool)
+            .await;
+
+        if result.is_err() {
+            return Json(serde_json::json!({ "status": "error", "message": "更新相册失败" }));
+        }
+    }
+
     Json(serde_json::json!({ "status": "ok" }))
 }
 
-// 4. 主页（God and the Goat 主题）
-async fn home_page() -> Html<&'static str> {
-    Html(r#"
-        <!DOCTYPE html>
-        <html lang="zh-CN">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>God and the Goat | 神与山羊</title>
-            <style>
-                * {
-                    box-sizing: border-box;
-                    margin: 0;
-                    padding: 0;
-                }
-                body {
-                    height: 100vh;
-                    width: 100vw;
-                    background: radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.85) 100%), url('/static/bg.jpg');
-                    background-size: cover;
-                    background-position: center;
-                    background-repeat: no-repeat;
-                    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Georgia", serif;
-                    
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    text-align: center;
-                }
+async fn get_admins(State(pool): State<AppState>) -> Json<Vec<String>> {
+    let admins: Vec<(String,)> = sqlx::query_as("SELECT nickname FROM admins")
+        .fetch_all(&*pool)
+        .await
+        .unwrap_or_default();
 
-                h1.art-title {
-                    font-size: 4.5rem;
-                    font-weight: 800;
-                    letter-spacing: 5px;
-                    margin-bottom: 12px;
-                    background: linear-gradient(180deg, #ffffff 0%, #d4af37 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.9));
-                }
-
-                p.subtitle {
-                    font-size: 1.4rem;
-                    color: rgba(255, 255, 255, 0.85);
-                    margin-bottom: 45px;
-                    font-weight: 300;
-                    letter-spacing: 6px;
-                    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-                }
-
-                .btn {
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 14px 42px;
-                    font-size: 1.05rem;
-                    font-weight: 500;
-                    color: #0f172a;
-                    text-decoration: none;
-                    border-radius: 50px;
-                    background: linear-gradient(135deg, #fbf5b7 0%, #d4af37 100%);
-                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
-                    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                }
-
-                .btn:hover {
-                    transform: translateY(-4px) scale(1.03);
-                    box-shadow: 0 12px 30px rgba(212, 175, 55, 0.5);
-                    background: linear-gradient(135deg, #ffffff 0%, #fbf5b7 100%);
-                }
-
-                .btn span {
-                    margin-left: 8px;
-                    transition: transform 0.3s ease;
-                }
-
-                .btn:hover span {
-                    transform: translateX(5px);
-                }
-            </style>
-        </head>
-        <body>
-            <h1 class="art-title">God and the Goat</h1>
-            <p class="subtitle">神 与 山 羊</p>
-            <a href="/about" class="btn">探索序章 <span>→</span></a>
-        </body>
-        </html>
-    "#)
+    Json(admins.into_iter().map(|(n,)| n).collect())
 }
 
-// 5. 第二个页面
+async fn toggle_admin(
+    State(pool): State<AppState>,
+    Json(data): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let nickname = data.get("nickname").and_then(|v| v.as_str()).unwrap_or("");
+
+    let exists: Option<(String,)> = sqlx::query_as("SELECT nickname FROM admins WHERE nickname = ?")
+        .bind(nickname)
+        .fetch_optional(&*pool)
+        .await
+        .unwrap_or(None);
+
+    let result = if exists.is_some() {
+        sqlx::query("DELETE FROM admins WHERE nickname = ?")
+            .bind(nickname)
+            .execute(&*pool)
+            .await
+    } else {
+        sqlx::query("INSERT INTO admins (nickname) VALUES (?)")
+            .bind(nickname)
+            .execute(&*pool)
+            .await
+    };
+
+    match result {
+        Ok(_) => Json(serde_json::json!({ "status": "ok" })),
+        Err(e) => Json(serde_json::json!({ "status": "error", "message": e.to_string() })),
+    }
+}
+
+async fn home_page() -> Html<String> {
+    let html_content = std::fs::read_to_string("index.html")
+        .unwrap_or_else(|_| "<h1>Error: index.html not found</h1>".to_string());
+    Html(html_content)
+}
+
 async fn about_page() -> Html<&'static str> {
     Html(r#"
         <!DOCTYPE html>
