@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>God and the Goat | 神与山羊</title>
-    <script src="https://openfpcdn.io/fingerprintjs/v3/umd.min.js"></script>
+    <title>God and the Goat | 神 与 羊</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -16,6 +15,7 @@
             color: #fff; overflow: hidden; position: relative;
         }
 
+        /* 1. 落地首页 */
         .landing-container {
             height: 100%; display: flex; flex-direction: column;
             justify-content: center; align-items: center; text-align: center;
@@ -35,6 +35,7 @@
         }
         .btn:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(212, 175, 55, 0.5); }
 
+        /* 弹窗通用结构 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
@@ -44,70 +45,80 @@
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-card {
             background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(212, 175, 55, 0.4);
-            border-radius: 16px; padding: 35px 30px; width: 90%; max-width: 420px;
+            border-radius: 16px; padding: 30px; width: 90%; max-width: 450px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8); text-align: left; position: relative;
         }
         .modal-title { font-size: 1.5rem; text-align: center; color: #d4af37; margin-bottom: 6px; }
-        .modal-subtitle { font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); text-align: center; margin-bottom: 25px; }
-        .form-group { margin-bottom: 18px; }
+        .modal-subtitle { font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); text-align: center; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 0.85rem; color: #d4af37; margin-bottom: 6px; }
         .form-group input, .form-group select {
-            width: 100%; padding: 12px 14px; background: rgba(255, 255, 255, 0.05);
+            width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; color: #fff; outline: none;
         }
         .submit-btn {
-            width: 100%; padding: 13px; margin-top: 10px;
+            width: 100%; padding: 12px; margin-top: 10px;
             background: linear-gradient(135deg, #fbf5b7 0%, #d4af37 100%);
             color: #0f172a; border: none; border-radius: 50px; font-weight: bold; cursor: pointer;
         }
+        .msg-box { font-size: 0.85rem; padding: 10px; border-radius: 6px; margin-bottom: 12px; text-align: center; }
+        .msg-box.error { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .msg-box.success { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
 
+        /* 2. 主控制台界面 */
         .main-dashboard {
             display: none; height: 100%; width: 100%; padding: 40px;
             flex-direction: column; justify-content: center; align-items: center; position: relative;
         }
         .main-dashboard.active { display: flex; }
 
+        /* 右上角玩家名牌栏 */
         .user-profile-bar {
             position: absolute; top: 25px; right: 35px;
-            display: flex; align-items: center; gap: 15px;
+            display: flex; align-items: center; gap: 12px;
             background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px);
             border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 40px;
-            padding: 6px 18px 6px 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); cursor: pointer;
+            padding: 6px 18px 6px 10px; cursor: pointer;
         }
         .avatar-wrapper {
             position: relative; width: 44px; height: 44px; border-radius: 50%;
             overflow: hidden; border: 2px solid #d4af37; flex-shrink: 0;
         }
         .avatar-img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1/1; }
+        .avatar-hover-tip {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; color: #fff; opacity: 0; transition: opacity 0.2s;
+        }
+        .avatar-wrapper:hover .avatar-hover-tip { opacity: 1; }
+        #avatar-file-input, #album-file-input { display: none; }
+
         .user-details { text-align: right; }
         .user-nickname { font-weight: bold; color: #fbf5b7; font-size: 0.95rem; }
         .user-role-tag { font-size: 0.7rem; color: #d4af37; border: 1px solid #d4af37; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
         .user-race { font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); }
 
+        /* 毛玻璃方块网格 */
         .grid-menu {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
             width: 100%; max-width: 900px; margin-top: 20px;
         }
         .glass-card {
-            background: rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px;
-            padding: 30px; display: flex; flex-direction: column;
+            padding: 25px; display: flex; flex-direction: column;
             justify-content: center; align-items: center; cursor: pointer;
-            transition: all 0.3s; color: #fff;
+            transition: all 0.3s; color: #fff; text-align: center;
         }
-        .glass-card:hover {
-            background: rgba(255, 255, 255, 0.12); border-color: rgba(212, 175, 55, 0.6);
-            transform: translateY(-5px);
-        }
-        .glass-card.large { grid-column: span 2; height: 180px; }
-        .glass-card.medium { grid-column: span 1; height: 180px; }
-        .glass-card.small { grid-column: span 1; height: 130px; }
-        .card-icon { font-size: 2.2rem; margin-bottom: 10px; }
-        .card-title { font-size: 1.3rem; font-weight: 600; color: #fbf5b7; }
-        .card-desc { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 6px; }
+        .glass-card:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(212, 175, 55, 0.6); transform: translateY(-5px); }
+        .glass-card.large { grid-column: span 2; height: 170px; }
+        .glass-card.medium { grid-column: span 1; height: 170px; }
+        .glass-card.small { grid-column: span 1; height: 125px; }
+        .card-icon { font-size: 2.2rem; margin-bottom: 8px; }
+        .card-title { font-size: 1.2rem; font-weight: 600; color: #fbf5b7; }
+        .card-desc { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 4px; }
 
-        /* 论坛 */
+        /* 3. 论坛与消息流 */
         .forum-modal {
             position: fixed; inset: 0; background: rgba(11, 15, 25, 0.95);
             backdrop-filter: blur(12px); z-index: 10000; display: none;
@@ -118,31 +129,31 @@
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 15px; margin-bottom: 20px;
         }
-        .forum-title { font-size: 1.6rem; color: #d4af37; }
+        .forum-title { font-size: 1.5rem; color: #d4af37; }
         .close-btn { font-size: 1.8rem; cursor: pointer; color: #aaa; }
         .close-btn:hover { color: #fff; }
 
-        .forum-body { flex: 1; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 16px; }
+        .forum-body { flex: 1; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 14px; }
         .post-item {
             background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px; padding: 14px 18px; display: flex; gap: 15px; align-items: flex-start;
+            border-radius: 12px; padding: 12px 16px; display: flex; gap: 14px; align-items: flex-start;
         }
-        .post-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #d4af37; }
+        .post-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 1px solid #d4af37; cursor: pointer; }
         .post-content-box { flex: 1; text-align: left; }
-        .post-meta { display: flex; justify-content: space-between; margin-bottom: 6px; }
-        .post-author { font-size: 0.9rem; font-weight: bold; color: #fbf5b7; }
+        .post-meta { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .post-author { font-size: 0.9rem; font-weight: bold; color: #fbf5b7; cursor: pointer; }
         .post-time { font-size: 0.75rem; color: #777; }
         .post-text { font-size: 0.95rem; color: #ddd; line-height: 1.4; }
 
         .admin-action-btn {
             font-size: 0.75rem; color: #ef4444; border: 1px solid #ef4444; border-radius: 4px;
-            padding: 2px 6px; cursor: pointer; margin-left: 8px;
+            padding: 1px 6px; cursor: pointer; margin-left: 8px;
         }
         .admin-action-btn:hover { background: #ef4444; color: #fff; }
 
         .forum-footer { margin-top: 15px; display: flex; gap: 12px; }
         .forum-input {
-            flex: 1; padding: 14px 18px; background: rgba(255, 255, 255, 0.08);
+            flex: 1; padding: 12px 18px; background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 30px;
             color: #fff; outline: none; font-size: 0.95rem;
         }
@@ -150,47 +161,71 @@
             padding: 0 28px; background: linear-gradient(135deg, #fbf5b7 0%, #d4af37 100%);
             color: #0f172a; border: none; border-radius: 30px; font-weight: bold; cursor: pointer;
         }
-        .send-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
 
+        /* 4. 相册与个人卡片 */
+        .album-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            max-height: 320px; overflow-y: auto; margin-top: 15px;
+        }
+        .album-item {
+            width: 100%; aspect-ratio: 1/1; border-radius: 8px; overflow: hidden;
+            border: 1px solid rgba(212, 175, 55, 0.3); position: relative;
+        }
+        .album-item img { width: 100%; height: 100%; object-fit: cover; }
+        .album-del-btn {
+            position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9);
+            color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px;
+            cursor: pointer; font-size: 0.8rem; display: flex; justify-content: center; align-items: center;
+        }
+
+        .profile-modal-card { text-align: center; }
+        .profile-avatar-large { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #d4af37; margin: 0 auto 12px; object-fit: cover; }
+        .profile-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.88rem; }
+        .profile-info-label { color: #d4af37; }
+
+        /* 5. 序章对话界面 */
         .prologue-overlay {
             position: fixed; inset: 0; background: #000; z-index: 20000;
             display: none; flex-direction: column; justify-content: flex-end; padding: 40px;
         }
         .prologue-overlay.active { display: flex; }
         .dialog-box {
-            background: rgba(15, 23, 42, 0.9); border: 2px solid #d4af37;
-            border-radius: 16px; padding: 25px; width: 100%; max-width: 900px; margin: 0 auto;
+            background: rgba(15, 23, 42, 0.92); border: 2px solid #d4af37;
+            border-radius: 16px; padding: 25px; width: 100%; max-width: 850px; margin: 0 auto; text-align: left;
         }
         .speaker-name { font-size: 1.2rem; color: #d4af37; font-weight: bold; margin-bottom: 10px; }
-        .dialog-text { font-size: 1.1rem; line-height: 1.6; color: #f0f0f0; min-height: 60px; }
-        .options-container { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .dialog-text { font-size: 1.05rem; line-height: 1.6; color: #f0f0f0; min-height: 60px; }
+        .options-container { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
         .dialog-opt-btn {
-            padding: 12px 20px; background: rgba(212, 175, 55, 0.1); border: 1px solid #d4af37;
-            color: #fbf5b7; border-radius: 8px; cursor: pointer; text-align: left;
+            padding: 12px 18px; background: rgba(212, 175, 55, 0.1); border: 1px solid #d4af37;
+            color: #fbf5b7; border-radius: 8px; cursor: pointer; text-align: left; transition: all 0.2s;
         }
+        .dialog-opt-btn:hover { background: rgba(212, 175, 55, 0.3); }
     </style>
 </head>
 <body>
 
+    <!-- 落地开场 -->
     <div id="landing-page" class="landing-container">
         <h1 class="art-title">God and the Goat</h1>
-        <p class="subtitle">神 与 山 羊</p>
+        <p class="subtitle">神 与 羊</p>
         <button class="btn" onclick="openRegister()">探索序章 <span style="margin-left: 6px;">→</span></button>
     </div>
 
+    <!-- 账号注册弹窗 -->
     <div id="register-modal" class="modal-overlay">
       <div class="modal-card">
         <h2 class="modal-title">神与羊：序章契约</h2>
         <p class="modal-subtitle">单台设备仅可绑定一个灵魂契约</p>
         <form id="register-form" onsubmit="handleRegister(event)">
           <div class="form-group">
-            <label for="reg-nickname">灵魂昵称</label>
+            <label for="reg-nickname">灵魂昵称（具有唯一性）</label>
             <input type="text" id="reg-nickname" placeholder="请输入唯一昵称" required maxlength="16" />
           </div>
           <div class="form-group">
-            <label for="reg-race">所属种族</label>
+            <label for="reg-race">所属阵营</label>
             <select id="reg-race" required>
-              <option value="" disabled selected>-- 请选择你的阵营/种族 --</option>
+              <option value="" disabled selected>-- 请选择你的阵营 --</option>
               <option value="天堂">天堂 (Heaven)</option>
               <option value="人间">人间 (Mortal)</option>
               <option value="地狱">地狱 (Hell)</option>
@@ -200,32 +235,39 @@
             <label for="reg-email">灵魂邮箱</label>
             <input type="email" id="reg-email" placeholder="name@example.com" required />
           </div>
+          <div id="modal-msg" class="msg-box" style="display:none;"></div>
           <button type="submit" class="submit-btn">签订契约并进入</button>
         </form>
       </div>
     </div>
 
+    <!-- 主控制台 -->
     <div id="main-dashboard" class="main-dashboard">
-        <div class="user-profile-bar" onclick="alert('当前身份：' + currentUser.role)">
+        <!-- 右上角玩家个人栏 -->
+        <div class="user-profile-bar" onclick="openProfileCard(currentUser.nickname)">
             <div class="user-details">
-                <div class="user-nickname"><span id="user-nickname-display">玩家昵称</span><span id="role-tag-display" class="user-role-tag">绝对主神</span></div>
-                <div id="user-race-display" class="user-race">种族</div>
+                <div class="user-nickname"><span id="user-nickname-display">玩家昵称</span><span id="role-tag-display" class="user-role-tag" style="display:none;">管理者</span></div>
+                <div id="user-race-display" class="user-race">阵营</div>
             </div>
-            <div class="avatar-wrapper">
+            <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerAvatarUpload();">
                 <img id="user-avatar-img" class="avatar-img" src="https://api.dicebear.com/7.x/bottts/svg?seed=goat" />
+                <div class="avatar-hover-tip">修改</div>
             </div>
+            <input type="file" id="avatar-file-input" accept="image/*" onchange="handleAvatarChange(event)" />
+            <input type="file" id="album-file-input" accept="image/*" onchange="handleAlbumUpload(event)" />
         </div>
 
+        <!-- 毛玻璃菜单网格 -->
         <div class="grid-menu">
             <div class="glass-card large" onclick="openForum()">
                 <div class="card-icon">🏛️</div>
                 <div class="card-title">万神圣坛 · 论坛</div>
-                <div class="card-desc">全服云端实时言论频道</div>
+                <div class="card-desc">全服实时交流</div>
             </div>
-            <div class="glass-card medium" onclick="alert('灵魂相册维护中...')">
+            <div class="glass-card medium" onclick="openAlbumModal(currentUser.nickname)">
                 <div class="card-icon">🖼️</div>
                 <div class="card-title">灵魂相册</div>
-                <div class="card-desc">个人回忆画廊</div>
+                <div class="card-desc">展示与管理回忆画廊</div>
             </div>
             <div class="glass-card small" onclick="startPrologueGame(true)">
                 <div class="card-icon">📜</div>
@@ -242,20 +284,55 @@
         </div>
     </div>
 
-    <!-- 论坛 -->
+    <!-- 论坛界面 -->
     <div id="forum-modal" class="forum-modal">
         <div class="forum-header">
-            <div class="forum-title">🏛️ 万神圣坛论坛 (全服同步)</div>
+            <div class="forum-title">🏛️ 万神圣坛论坛 (全服频道)</div>
             <div class="close-btn" onclick="closeForum()">&times;</div>
         </div>
         <div id="forum-body" class="forum-body"></div>
         <div class="forum-footer">
-            <input type="text" id="forum-input" class="forum-input" placeholder="撰写你的全服发言..." maxlength="100" />
+            <input type="text" id="forum-input" class="forum-input" placeholder="撰写发言（按 Enter 或点击发送）..." maxlength="100" onkeydown="if(event.key==='Enter') sendPost()" />
             <button id="send-btn" class="send-btn" onclick="sendPost()">发送</button>
         </div>
     </div>
 
-    <!-- 序章界面 -->
+    <!-- 相册弹窗 -->
+    <div id="album-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 500px;">
+            <div class="close-btn" style="position:absolute; top:15px; right:20px;" onclick="closeAlbumModal()">&times;</div>
+            <h2 id="album-title" class="modal-title">🖼️ 灵魂相册</h2>
+            <p id="album-subtitle" class="modal-subtitle">公开相册</p>
+            <button id="album-upload-btn" class="submit-btn" style="margin-bottom: 12px; display:none;" onclick="triggerAlbumUpload()">+ 上传新照片</button>
+            <div id="album-grid" class="album-grid"></div>
+        </div>
+    </div>
+
+    <!-- 个人中心卡片（包含授权管理与强删照片功能） -->
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-card profile-modal-card">
+            <div class="close-btn" style="position:absolute; top:15px; right:20px;" onclick="closeProfileCard()">&times;</div>
+            <img id="pf-avatar" class="profile-avatar-large" src="" />
+            <h3 id="pf-nickname" style="color:#d4af37; margin-bottom:12px;">-</h3>
+            <div class="profile-info-row">
+                <span class="profile-info-label">身份权限</span>
+                <span id="pf-role" style="color:#eee;">-</span>
+            </div>
+            <div class="profile-info-row">
+                <span class="profile-info-label">契约阵营</span>
+                <span id="pf-race" style="color:#eee;">-</span>
+            </div>
+
+            <!-- 问彩蝶专属控制权 -->
+            <button id="super-admin-reset-avatar-btn" class="submit-btn" style="background:#ef4444; color:#fff; display:none; margin-top:12px;" onclick="superAdminResetAvatar()">🚨 强行重置该玩家头像</button>
+            <div id="super-admin-panel" style="display:none; margin-top:15px;">
+                <input type="text" id="target-user-input" placeholder="输入玩家昵称" style="width:100%; padding:8px; margin-bottom:8px; background:rgba(255,255,255,0.1); border:1px solid #d4af37; color:#fff; border-radius:6px;" />
+                <button onclick="toggleAdminRole()" class="submit-btn" style="padding:8px;">赋予 / 撤销 管理者权限</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 强制序章幕布 -->
     <div id="prologue-modal" class="prologue-overlay">
         <div id="prologue-skip-btn" class="close-btn" style="position:absolute; top:25px; right:35px; z-index:20001; display:none;" onclick="exitPrologue()">&times; 退出序章</div>
         <div class="dialog-box">
@@ -266,36 +343,75 @@
     </div>
 
     <script>
-        // 绝对主神/管理员昵称
+        // 1. 指定绝对超级管理员昵称：问彩蝶
         const SUPER_ADMIN_NAME = "问彩蝶"; 
 
-        // 全服公共云端存储通道 (无需本地服务器即可跨网络同步消息)
-        const GLOBAL_CLOUD_DB = "https://kvdb.io/GodAndGoat2026Server/global_chat_v1";
+        // 云端同步跨网络通道
+        const CLOUD_SYNC_URL = "https://kvdb.io/GodAndGoat2026_Final/global_state_v2";
 
         let currentUser = null;
+        let currentViewingAlbumUser = "";
+        let currentViewingProfileUser = "";
         let pollTimer = null;
-        let currentPostsCache = [];
+        let globalData = { posts: [], admins: [], userProfiles: {} };
         const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/bottts/svg?seed=goat";
 
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             const savedUser = localStorage.getItem('soul_contract');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
+                await syncCloudData();
                 checkUserRole();
                 if (!currentUser.hasFinishedPrologue) {
-                    startPrologueGame(false);
+                    startPrologueGame(false); // 第一次登录强行过序章
                 } else {
                     enterDashboard();
                 }
             }
         });
 
+        // 云端数据同步
+        async function syncCloudData() {
+            try {
+                const res = await fetch(CLOUD_SYNC_URL);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && typeof data === 'object') {
+                        globalData = {
+                            posts: data.posts || [],
+                            admins: data.admins || [],
+                            userProfiles: data.userProfiles || {}
+                        };
+                    }
+                }
+            } catch(e) {}
+        }
+
+        async function pushCloudData() {
+            try {
+                await fetch(CLOUD_SYNC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(globalData)
+                });
+            } catch(e) {}
+        }
+
         function checkUserRole() {
             if (currentUser.nickname === SUPER_ADMIN_NAME) {
                 currentUser.role = 'SUPER_ADMIN';
+            } else if (globalData.admins.includes(currentUser.nickname)) {
+                currentUser.role = 'ADMIN';
             } else {
                 currentUser.role = 'USER';
             }
+        }
+
+        function showModalMsg(text, type = 'error') {
+            const msgEl = document.getElementById('modal-msg');
+            msgEl.innerText = text;
+            msgEl.className = `msg-box ${type}`;
+            msgEl.style.display = 'block';
         }
 
         function openRegister() {
@@ -307,22 +423,37 @@
             document.getElementById('register-modal').classList.add('active');
         }
 
-        function handleRegister(event) {
+        // 账号唯一性注册逻辑
+        async function handleRegister(event) {
             event.preventDefault();
             const nickname = document.getElementById('reg-nickname').value.trim();
             const race = document.getElementById('reg-race').value;
             const email = document.getElementById('reg-email').value.trim();
 
+            await syncCloudData();
+
+            // 验证昵称唯一性
+            if (globalData.userProfiles[nickname] && nickname !== SUPER_ADMIN_NAME) {
+                showModalMsg('该灵魂昵称已被占用，请换一个！', 'error');
+                return;
+            }
+
             currentUser = { 
                 nickname, race, email,
                 avatar: DEFAULT_AVATAR, 
-                hasFinishedPrologue: false
+                hasFinishedPrologue: false,
+                album: []
             };
+
+            // 存入全局用户集
+            globalData.userProfiles[nickname] = currentUser;
+            await pushCloudData();
+
             checkUserRole();
             localStorage.setItem('soul_contract', JSON.stringify(currentUser));
 
             document.getElementById('register-modal').classList.remove('active');
-            startPrologueGame(false);
+            startPrologueGame(false); // 强制序章试炼
         }
 
         function enterDashboard() {
@@ -334,47 +465,31 @@
 
             const tagEl = document.getElementById('role-tag-display');
             if (currentUser.role === 'SUPER_ADMIN') {
-                tagEl.innerText = '绝对主神/管理者'; 
-                tagEl.style.display = 'inline-block';
+                tagEl.innerText = '绝对主神'; tagEl.style.display = 'inline-block';
+            } else if (currentUser.role === 'ADMIN') {
+                tagEl.innerText = '管理者'; tagEl.style.display = 'inline-block';
             } else {
                 tagEl.style.display = 'none';
             }
         }
 
-        /* ====== 全服同步与绝对防御逻辑 ====== */
+        /* 论坛与发言（解决无限次发言卡死） */
         function openForum() {
             fetchAndRenderPosts();
             document.getElementById('forum-modal').classList.add('active');
             if (!pollTimer) {
-                pollTimer = setInterval(fetchAndRenderPosts, 2000); // 2秒自动全服同步刷新
+                pollTimer = setInterval(fetchAndRenderPosts, 2000); // 2秒全服自动刷新
             }
         }
 
         function closeForum() {
             document.getElementById('forum-modal').classList.remove('active');
-            if (pollTimer) {
-                clearInterval(pollTimer);
-                pollTimer = null;
-            }
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         }
 
         async function fetchAndRenderPosts() {
-            try {
-                // 安全获取全服云端数据
-                const res = await fetch(GLOBAL_CLOUD_DB);
-                if (res.ok) {
-                    const text = await res.text();
-                    try {
-                        const data = JSON.parse(text);
-                        if (Array.isArray(data)) {
-                            currentPostsCache = data;
-                        }
-                    } catch(e) {}
-                }
-            } catch (e) {
-                // 异常时维持现有缓存
-            }
-            renderPostsUI(currentPostsCache);
+            await syncCloudData();
+            renderPostsUI(globalData.posts);
         }
 
         function renderPostsUI(posts) {
@@ -387,22 +502,22 @@
                             <span class="post-author">创世神谕 [系统]</span>
                             <span class="post-time">全服共享频道</span>
                         </div>
-                        <div class="post-text">欢迎来到万神圣坛！所有玩家发言均已接入全服云端同步。</div>
+                        <div class="post-text">欢迎来到万神圣坛！点击玩家头像可公开查看其主页与灵魂相册。</div>
                     </div>
                 </div>
             `;
 
-            const isManager = (currentUser.role === 'SUPER_ADMIN');
+            const canDelete = (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN');
 
             posts.forEach((p, index) => {
-                const adminControls = isManager ? `<span class="admin-action-btn" onclick="deletePost(${index})">撤回</span>` : '';
+                const adminControls = canDelete ? `<span class="admin-action-btn" onclick="deletePost(${index})">撤回</span>` : '';
 
                 body.insertAdjacentHTML('beforeend', `
                     <div class="post-item">
-                        <img class="post-avatar" src="${p.avatar || DEFAULT_AVATAR}" />
+                        <img class="post-avatar" src="${p.avatar || DEFAULT_AVATAR}" onclick="openProfileCard('${escapeHtml(p.nickname)}')" title="点击查看个人主页与相册" />
                         <div class="post-content-box">
                             <div class="post-meta">
-                                <span class="post-author">${escapeHtml(p.nickname)} (${p.race}) ${adminControls}</span>
+                                <span class="post-author" onclick="openProfileCard('${escapeHtml(p.nickname)}')">${escapeHtml(p.nickname)} (${p.race}) ${adminControls}</span>
                                 <span class="post-time">${p.time}</span>
                             </div>
                             <div class="post-text">${escapeHtml(p.text)}</div>
@@ -413,23 +528,7 @@
             body.scrollTop = body.scrollHeight;
         }
 
-        // 管理员全服撤回发言
-        async function deletePost(postIndex) {
-            if (currentUser.role !== 'SUPER_ADMIN') return;
-            currentPostsCache.splice(postIndex, 1);
-            renderPostsUI(currentPostsCache);
-
-            try {
-                // 将撤回后的新数据全服写入云端
-                await fetch(GLOBAL_CLOUD_DB, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(currentPostsCache)
-                });
-            } catch (e) {}
-        }
-
-        // 彻底解决按纽卡死、无限次发送全服消息
+        // 绝对不会卡死的无限次发帖逻辑
         async function sendPost() {
             const input = document.getElementById('forum-input');
             const btn = document.getElementById('send-btn');
@@ -447,29 +546,174 @@
                 time: new Date().toLocaleTimeString()
             };
 
-            currentPostsCache.push(newPost);
-            if (currentPostsCache.len > 50) currentPostsCache.shift();
-            
+            globalData.posts.push(newPost);
+            if (globalData.posts.length > 60) globalData.posts.shift();
+
             input.value = '';
-            renderPostsUI(currentPostsCache);
+            renderPostsUI(globalData.posts);
 
             try {
-                // 同步发布到云端
-                await fetch(GLOBAL_CLOUD_DB, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(currentPostsCache)
-                });
-            } catch (e) {}
+                await pushCloudData();
+            } catch(e) {}
 
-            // 防卡死死锁机制：1 秒后必定重置解锁按纽，可连续发言
+            // 必能恢复按钮状态，保障循环发送
             setTimeout(() => {
                 btn.innerText = '发送';
                 btn.disabled = false;
-            }, 1000);
+            }, 600);
         }
 
-        /* 序章试炼 */
+        // 撤回发言
+        async function deletePost(index) {
+            if (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'ADMIN') return;
+            globalData.posts.splice(index, 1);
+            renderPostsUI(globalData.posts);
+            await pushCloudData();
+        }
+
+        /* 灵魂相册 (所有人查看，仅本人与问彩蝶可强删) */
+        function openAlbumModal(targetNickname) {
+            currentViewingAlbumUser = targetNickname || currentUser.nickname;
+            renderAlbum();
+            document.getElementById('album-modal').classList.add('active');
+        }
+        function closeAlbumModal() { document.getElementById('album-modal').classList.remove('active'); }
+
+        function triggerAlbumUpload() { document.getElementById('album-file-input').click(); }
+        function handleAlbumUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    if (!currentUser.album) currentUser.album = [];
+                    currentUser.album.push(e.target.result);
+                    localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+
+                    globalData.userProfiles[currentUser.nickname] = currentUser;
+                    await pushCloudData();
+                    renderAlbum();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderAlbum() {
+            const isOwner = (currentViewingAlbumUser === currentUser.nickname);
+            const isSuperAdmin = (currentUser.role === 'SUPER_ADMIN');
+
+            document.getElementById('album-title').innerText = `🖼️ ${currentViewingAlbumUser} 的灵魂相册`;
+            document.getElementById('album-subtitle').innerText = isOwner ? '你可以自由管理与上传你的相册照片' : '公开个人相册展示';
+            document.getElementById('album-upload-btn').style.display = isOwner ? 'block' : 'none';
+
+            let profile = globalData.userProfiles[currentViewingAlbumUser] || (isOwner ? currentUser : { album: [] });
+            let albumList = profile.album || [];
+
+            const grid = document.getElementById('album-grid');
+            grid.innerHTML = '';
+
+            if (albumList.length === 0) {
+                grid.innerHTML = '<div style="grid-column:span 3; color:#888; font-size:0.85rem; padding:20px;">相册暂无照片</div>';
+                return;
+            }
+
+            albumList.forEach((imgSrc, idx) => {
+                // 本人可删，超级管理员问彩蝶也可强删
+                const canDeleteImg = isOwner || isSuperAdmin;
+                const delBtnHTML = canDeleteImg ? `<button class="album-del-btn" onclick="deleteAlbumImg(${idx})">&times;</button>` : '';
+
+                grid.innerHTML += `
+                    <div class="album-item">
+                        <img src="${imgSrc}" />
+                        ${delBtnHTML}
+                    </div>
+                `;
+            });
+        }
+
+        async function deleteAlbumImg(idx) {
+            const isOwner = (currentViewingAlbumUser === currentUser.nickname);
+            let profile = globalData.userProfiles[currentViewingAlbumUser] || currentUser;
+
+            if (profile.album) {
+                profile.album.splice(idx, 1);
+            }
+            if (isOwner) {
+                currentUser.album = profile.album;
+                localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+            }
+            globalData.userProfiles[currentViewingAlbumUser] = profile;
+            await pushCloudData();
+            renderAlbum();
+        }
+
+        /* 个人主页卡片查看 */
+        function openProfileCard(targetNickname) {
+            currentViewingProfileUser = targetNickname || currentUser.nickname;
+            const isOwner = (currentViewingProfileUser === currentUser.nickname);
+            const isSuperAdmin = (currentUser.role === 'SUPER_ADMIN');
+
+            let profile = globalData.userProfiles[currentViewingProfileUser] || (isOwner ? currentUser : { nickname: targetNickname, race: '未知', avatar: DEFAULT_AVATAR });
+
+            document.getElementById('pf-avatar').src = profile.avatar || DEFAULT_AVATAR;
+            document.getElementById('pf-nickname').innerText = profile.nickname;
+            document.getElementById('pf-race').innerText = profile.race;
+            
+            const roleName = profile.nickname === SUPER_ADMIN_NAME ? '绝对主神' : (globalData.admins.includes(profile.nickname) ? '管理者' : '普通玩家');
+            document.getElementById('pf-role').innerText = roleName;
+
+            // 问彩蝶专属强重置违规头像按纽
+            document.getElementById('super-admin-reset-avatar-btn').style.display = (isSuperAdmin && !isOwner) ? 'block' : 'none';
+            document.getElementById('super-admin-panel').style.display = (isSuperAdmin && isOwner) ? 'block' : 'none';
+
+            document.getElementById('profile-modal').classList.add('active');
+        }
+        function closeProfileCard() { document.getElementById('profile-modal').classList.remove('active'); }
+
+        // 问彩蝶重置违规头像
+        async function superAdminResetAvatar() {
+            if (currentUser.role !== 'SUPER_ADMIN') return;
+            if (globalData.userProfiles[currentViewingProfileUser]) {
+                globalData.userProfiles[currentViewingProfileUser].avatar = DEFAULT_AVATAR;
+                await pushCloudData();
+            }
+            document.getElementById('pf-avatar').src = DEFAULT_AVATAR;
+            alert(`已强行重置玩家 ${currentViewingProfileUser} 的违规头像！`);
+        }
+
+        // 问彩蝶赋予/撤销管理者身份
+        async function toggleAdminRole() {
+            const targetName = document.getElementById('target-user-input').value.trim();
+            if (!targetName) return alert('请输入玩家昵称！');
+
+            if (globalData.admins.includes(targetName)) {
+                globalData.admins = globalData.admins.filter(n => n !== targetName);
+                alert(`已撤销 ${targetName} 的管理者身份！`);
+            } else {
+                globalData.admins.push(targetName);
+                alert(`已成功赋予 ${targetName} 管理者身份！`);
+            }
+            await pushCloudData();
+            document.getElementById('target-user-input').value = '';
+        }
+
+        function triggerAvatarUpload() { document.getElementById('avatar-file-input').click(); }
+        function handleAvatarChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    currentUser.avatar = e.target.result;
+                    localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+                    document.getElementById('user-avatar-img').src = e.target.result;
+
+                    globalData.userProfiles[currentUser.nickname] = currentUser;
+                    await pushCloudData();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        /* 强制序章对话流程 */
         const storyData = {
             start: {
                 speaker: "未知迷雾",
