@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>God and the Goat | God and the Goat</title>
-    <!-- 引入设备指纹库 (用于判断设备唯一性) -->
+    <!-- 引入设备指纹库 -->
     <script src="https://openfpcdn.io/fingerprintjs/v3/umd.min.js"></script>
     <style>
         * {
@@ -72,7 +72,7 @@
             background: linear-gradient(135deg, #ffffff 0%, #fbf5b7 100%);
         }
 
-        /* 统一注册弹窗样式 */
+        /* 注册弹窗样式 */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -208,9 +208,7 @@
     <script>
         let deviceVisitorId = "";
 
-        // 1. 初始化页面并获取设备指纹
         window.addEventListener('DOMContentLoaded', async () => {
-            // 初始化 FingerprintJS 设备指纹
             try {
                 const fp = await FingerprintJS.load();
                 const result = await fp.get();
@@ -220,18 +218,15 @@
             }
         });
 
-        // 2. 打开弹窗逻辑（点击“探索序章”按钮时触发）
         function openRegister() {
             const localUser = localStorage.getItem('soul_contract');
             if (localUser) {
-                alert("你已签订契约，正在直接进入序章...");
-                // 此处可直接跳转到序章页面/触发游戏逻辑
+                alert("你已签订契约，直接进入序章...");
                 return;
             }
             document.getElementById('register-modal').classList.add('active');
         }
 
-        // 3. 提示信息展示
         function showModalMsg(text, type = 'error') {
             const msgEl = document.getElementById('modal-msg');
             msgEl.innerText = text;
@@ -239,7 +234,6 @@
             msgEl.style.display = 'block';
         }
 
-        // 4. 提交表单处理
         async function handleRegister(event) {
             event.preventDefault();
             
@@ -252,12 +246,10 @@
                 return;
             }
 
-            // 兜底设备标识
             const deviceId = deviceVisitorId || localStorage.getItem('backup_device_id') || Math.random().toString(36).substring(2);
             localStorage.setItem('backup_device_id', deviceId);
 
             try {
-                // 请求后端 API 进行昵称与设备的唯一性校验
                 const res = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -272,24 +264,13 @@
                     
                     setTimeout(() => {
                         document.getElementById('register-modal').classList.remove('active');
-                        // 进入游戏/序章逻辑
                     }, 1200);
                 } else {
-                    // 显示后端返回的错误信息（如“昵称已存在”或“设备已被绑定”）
-                    showModalMsg(data.error, 'error');
+                    showModalMsg(data.error || '注册失败', 'error');
                 }
             } catch (err) {
-                showModalMsg('网络异常，请稍后重试', 'error');
+                showModalMsg('网络异常或后端服务未响应！', 'error');
             }
-        }
-    </script>
-</body>
-</html>
-            document.getElementById('registerModal').classList.remove('active');
-
-            // 成功提示并开启游戏
-            alert(`契约已成！欢迎来到《God and the Goat》的世界，${username}！`);
-            // 这里后续同样可接跳转逻辑
         }
     </script>
 </body>
