@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>God and the Goat | God and the Goat</title>
-    <!-- 引入设备指纹库 -->
+    <!-- 引入设备指纹库 (用于判断设备唯一性) -->
     <script src="https://openfpcdn.io/fingerprintjs/v3/umd.min.js"></script>
     <style>
         * {
@@ -208,6 +208,7 @@
     <script>
         let deviceVisitorId = "";
 
+        // 1. 页面加载初始化设备指纹
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 const fp = await FingerprintJS.load();
@@ -218,15 +219,18 @@
             }
         });
 
+        // 2. 点击“探索序章”按钮触发
         function openRegister() {
             const localUser = localStorage.getItem('soul_contract');
             if (localUser) {
-                alert("你已签订契约，直接进入序章...");
+                const user = JSON.parse(localUser);
+                alert(`欢迎回来，来自【${user.race}】的 ${user.nickname}！即将进入序章...`);
                 return;
             }
             document.getElementById('register-modal').classList.add('active');
         }
 
+        // 3. 提示框
         function showModalMsg(text, type = 'error') {
             const msgEl = document.getElementById('modal-msg');
             msgEl.innerText = text;
@@ -234,7 +238,8 @@
             msgEl.style.display = 'block';
         }
 
-        async function handleRegister(event) {
+        // 4. 本地前端契约逻辑（离线响应，无需后端 API）
+        function handleRegister(event) {
             event.preventDefault();
             
             const nickname = document.getElementById('reg-nickname').value.trim();
@@ -249,28 +254,22 @@
             const deviceId = deviceVisitorId || localStorage.getItem('backup_device_id') || Math.random().toString(36).substring(2);
             localStorage.setItem('backup_device_id', deviceId);
 
-            try {
-                const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nickname, race, email, deviceId })
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    showModalMsg('契约签订成功！正在进入游戏...', 'success');
-                    localStorage.setItem('soul_contract', JSON.stringify({ nickname, race, email, deviceId }));
-                    
-                    setTimeout(() => {
-                        document.getElementById('register-modal').classList.remove('active');
-                    }, 1200);
-                } else {
-                    showModalMsg(data.error || '注册失败', 'error');
-                }
-            } catch (err) {
-                showModalMsg('网络异常或后端服务未响应！', 'error');
+            // 设备限制检查
+            const existingContract = localStorage.getItem('soul_contract');
+            if (existingContract) {
+                showModalMsg('该设备已签订过契约，无法重复创建！', 'error');
+                return;
             }
+
+            // 保存用户契约
+            const userData = { nickname, race, email, deviceId, createdAt: new Date().toISOString() };
+            localStorage.setItem('soul_contract', JSON.stringify(userData));
+
+            showModalMsg('契约签订成功！正在进入游戏...', 'success');
+
+            setTimeout(() => {
+                document.getElementById('register-modal').classList.remove('active');
+            }, 1200);
         }
     </script>
 </body>
