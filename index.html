@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>God and the Goat | God and the Goat</title>
+    <title>God and the Goat | 神与山羊</title>
+    <!-- 引入设备指纹库 (用于判断设备唯一性) -->
+    <script src="https://openfpcdn.io/fingerprintjs/v3/umd.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -19,7 +21,6 @@
             background-repeat: no-repeat;
             background-color: #0b0f19;
             font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Georgia", serif;
-            
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -71,22 +72,17 @@
             background: linear-gradient(135deg, #ffffff 0%, #fbf5b7 100%);
         }
 
-        /* 注册弹窗样式 */
+        /* 统一注册弹窗样式 */
         .modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.75);
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(8px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
-            z-index: 999;
         }
 
         .modal-overlay.active {
@@ -97,63 +93,71 @@
         .modal-card {
             background: rgba(15, 23, 42, 0.95);
             border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 16px;
             padding: 35px 30px;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 380px;
+            width: 90%; max-width: 400px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(212, 175, 55, 0.2);
-            text-align: center;
-        }
-
-        .modal-card h2 {
-            color: #d4af37;
-            font-size: 1.6rem;
-            margin-bottom: 8px;
-            letter-spacing: 2px;
-        }
-
-        .modal-card p {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9rem;
-            margin-bottom: 25px;
-        }
-
-        .input-group {
-            margin-bottom: 18px;
+            color: #fff;
             text-align: left;
         }
 
-        .input-group label {
-            display: block;
-            color: #d4af37;
-            font-size: 0.8rem;
-            margin-bottom: 6px;
+        .modal-title { 
+            font-size: 1.5rem; 
+            margin-bottom: 6px; 
+            text-align: center; 
+            color: #d4af37; 
+            letter-spacing: 2px;
+        }
+        
+        .modal-subtitle { 
+            font-size: 0.85rem; 
+            color: rgba(255, 255, 255, 0.7); 
+            text-align: center; 
+            margin-bottom: 25px; 
+        }
+
+        .form-group { margin-bottom: 18px; }
+        .form-group label { 
+            display: block; 
+            font-size: 0.85rem; 
+            color: #d4af37; 
+            margin-bottom: 6px; 
             letter-spacing: 1px;
         }
 
-        .input-group input {
-            width: 100%;
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
+        .form-group input, .form-group select {
+            width: 100%; padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.05); 
             border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 10px;
-            color: #fff;
-            font-size: 0.95rem;
-            outline: none;
+            border-radius: 8px; color: #fff; font-size: 0.95rem;
+            box-sizing: border-box; outline: none;
             transition: border 0.3s ease;
         }
-
-        .input-group input:focus {
-            border-color: #d4af37;
+        .form-group select option {
+            background: #0f172a;
+            color: #fff;
+        }
+        .form-group input:focus, .form-group select:focus { 
+            border-color: #d4af37; 
             background: rgba(255, 255, 255, 0.1);
         }
 
         .submit-btn {
-            width: 100%;
-            padding: 12px;
-            margin-top: 10px;
-            font-size: 1rem;
+            width: 100%; padding: 13px; margin-top: 10px;
+            background: linear-gradient(135deg, #fbf5b7 0%, #d4af37 100%);
+            color: #0f172a; border: none;
+            border-radius: 50px; font-size: 1rem; font-weight: bold;
+            cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
         }
+        .submit-btn:hover { 
+            background: linear-gradient(135deg, #ffffff 0%, #fbf5b7 100%);
+            transform: translateY(-2px);
+        }
+
+        .msg-box { font-size: 0.85rem; padding: 10px; border-radius: 6px; margin-bottom: 15px; text-align: center; }
+        .msg-box.error { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .msg-box.success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
     </style>
 </head>
 <body>
@@ -163,47 +167,124 @@
     
     <button class="btn" onclick="openRegister()">探索序章 <span style="margin-left: 6px;">→</span></button>
 
-    <!-- 强制注册弹窗 -->
-    <div class="modal-overlay" id="registerModal">
-        <div class="modal-card">
-            <h2>创建冒险者契约</h2>
-            <p>请先完成登记以踏入序章世界</p>
-            
-            <form onsubmit="handleRegister(event)">
-                <div class="input-group">
-                    <label>用户名 / 称号</label>
-                    <input type="text" id="username" placeholder="请输入你的名字" required>
-                </div>
-                <div class="input-group">
-                    <label>电子邮箱</label>
-                    <input type="email" id="email" placeholder="example@mail.com" required>
-                </div>
-                <button type="submit" class="btn submit-btn">签署契约进入</button>
-            </form>
-        </div>
+    <!-- 注册弹窗 -->
+    <div id="register-modal" class="modal-overlay">
+      <div class="modal-card">
+        <h2 class="modal-title">神与羊：序章契约</h2>
+        <p class="modal-subtitle">单台设备仅可绑定一个灵魂契约</p>
+        
+        <form id="register-form" onsubmit="handleRegister(event)">
+          <!-- 1. 灵魂昵称 (唯一) -->
+          <div class="form-group">
+            <label for="reg-nickname">灵魂昵称</label>
+            <input type="text" id="reg-nickname" placeholder="请输入唯一昵称" required maxlength="16" />
+          </div>
+
+          <!-- 2. 所属种族 -->
+          <div class="form-group">
+            <label for="reg-race">所属种族</label>
+            <select id="reg-race" required>
+              <option value="" disabled selected>-- 请选择你的阵营/种族 --</option>
+              <option value="天堂">天堂 (Heaven)</option>
+              <option value="人间">人间 (Mortal)</option>
+              <option value="地狱">地狱 (Hell)</option>
+            </select>
+          </div>
+
+          <!-- 3. 灵魂邮箱 -->
+          <div class="form-group">
+            <label for="reg-email">灵魂邮箱</label>
+            <input type="email" id="reg-email" placeholder="name@example.com" required />
+          </div>
+
+          <!-- 提示框 -->
+          <div id="modal-msg" class="msg-box" style="display:none;"></div>
+
+          <button type="submit" id="submit-btn" class="submit-btn">签订契约并进入</button>
+        </form>
+      </div>
     </div>
 
     <script>
-        function openRegister() {
-            const savedUser = localStorage.getItem('gatg_user');
-            if (savedUser) {
-                const user = JSON.parse(savedUser);
-                alert(`欢迎回来，尊贵的冒险者：${user.username}！正在载入序章...`);
-                // 这里后续可接入真实的序章跳转逻辑，例如：window.location.href = '/prologue.html';
-            } else {
-                document.getElementById('registerModal').classList.add('active');
+        let deviceVisitorId = "";
+
+        // 1. 初始化页面并获取设备指纹
+        window.addEventListener('DOMContentLoaded', async () => {
+            // 初始化 FingerprintJS 设备指纹
+            try {
+                const fp = await FingerprintJS.load();
+                const result = await fp.get();
+                deviceVisitorId = result.visitorId;
+            } catch (e) {
+                console.error('设备指纹加载异常:', e);
             }
+        });
+
+        // 2. 打开弹窗逻辑（点击“探索序章”按钮时触发）
+        function openRegister() {
+            const localUser = localStorage.getItem('soul_contract');
+            if (localUser) {
+                alert("你已签订契约，正在直接进入序章...");
+                // 此处可直接跳转到序章页面/触发游戏逻辑
+                return;
+            }
+            document.getElementById('register-modal').classList.add('active');
         }
 
-        function handleRegister(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
+        // 3. 提示信息展示
+        function showModalMsg(text, type = 'error') {
+            const msgEl = document.getElementById('modal-msg');
+            msgEl.innerText = text;
+            msgEl.className = `msg-box ${type}`;
+            msgEl.style.display = 'block';
+        }
 
-            // 本地保存注册信息
-            localStorage.setItem('gatg_user', JSON.stringify({ username, email }));
+        // 4. 提交表单处理
+        async function handleRegister(event) {
+            event.preventDefault();
+            
+            const nickname = document.getElementById('reg-nickname').value.trim();
+            const race = document.getElementById('reg-race').value;
+            const email = document.getElementById('reg-email').value.trim();
 
-            // 关闭弹窗
+            if (!nickname || !race || !email) {
+                showModalMsg('请完整填写所有信息！', 'error');
+                return;
+            }
+
+            // 兜底设备标识
+            const deviceId = deviceVisitorId || localStorage.getItem('backup_device_id') || Math.random().toString(36).substring(2);
+            localStorage.setItem('backup_device_id', deviceId);
+
+            try {
+                // 请求后端 API 进行昵称与设备的唯一性校验
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname, race, email, deviceId })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showModalMsg('契约签订成功！正在进入游戏...', 'success');
+                    localStorage.setItem('soul_contract', JSON.stringify({ nickname, race, email, deviceId }));
+                    
+                    setTimeout(() => {
+                        document.getElementById('register-modal').classList.remove('active');
+                        // 进入游戏/序章逻辑
+                    }, 1200);
+                } else {
+                    // 显示后端返回的错误信息（如“昵称已存在”或“设备已被绑定”）
+                    showModalMsg(data.error, 'error');
+                }
+            } catch (err) {
+                showModalMsg('网络异常，请稍后重试', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
             document.getElementById('registerModal').classList.remove('active');
 
             // 成功提示并开启游戏
