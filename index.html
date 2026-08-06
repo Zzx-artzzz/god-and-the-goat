@@ -287,7 +287,7 @@
     <!-- 论坛界面 -->
     <div id="forum-modal" class="forum-modal">
         <div class="forum-header">
-            <div class="forum-title">🏛️ 万神圣坛论坛 (全服频道)</div>
+            <div class="forum-title">🏛️ 万神圣坛论坛</div>
             <div class="close-btn" onclick="closeForum()">&times;</div>
         </div>
         <div id="forum-body" class="forum-body"></div>
@@ -464,7 +464,7 @@
         const tagEl = document.getElementById('role-tag-display');
         if (tagEl) {
             if (currentUser.role === 'SUPER_ADMIN') {
-                tagEl.innerText = '绝对主神'; tagEl.style.display = 'inline-block';
+                tagEl.innerText = '总管理'; tagEl.style.display = 'inline-block';
             } else if (currentUser.role === 'ADMIN') {
                 tagEl.innerText = '管理者'; tagEl.style.display = 'inline-block';
             } else {
