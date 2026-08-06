@@ -124,7 +124,7 @@
         .card-title { font-size: 1.3rem; font-weight: 600; color: #fbf5b7; letter-spacing: 2px; }
         .card-desc { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 6px; }
 
-        /* 论坛模块与管理操作按纽 */
+        /* 论坛 */
         .forum-modal {
             position: fixed; inset: 0; background: rgba(11, 15, 25, 0.92);
             backdrop-filter: blur(12px); z-index: 10000; display: none;
@@ -144,10 +144,10 @@
             background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px; padding: 14px 18px; display: flex; gap: 15px; align-items: flex-start;
         }
-        .post-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #d4af37; }
+        .post-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #d4af37; cursor: pointer; }
         .post-content-box { flex: 1; text-align: left; }
         .post-meta { display: flex; justify-content: space-between; margin-bottom: 6px; }
-        .post-author { font-size: 0.9rem; font-weight: bold; color: #fbf5b7; }
+        .post-author { font-size: 0.9rem; font-weight: bold; color: #fbf5b7; cursor: pointer; }
         .post-time { font-size: 0.75rem; color: #777; }
         .post-text { font-size: 0.95rem; color: #ddd; line-height: 1.4; }
         
@@ -167,9 +167,8 @@
             padding: 0 28px; background: linear-gradient(135deg, #fbf5b7 0%, #d4af37 100%);
             color: #0f172a; border: none; border-radius: 30px; font-weight: bold; cursor: pointer;
         }
-        .send-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
 
-        /* 相册模态框 */
+        /* 相册样式 */
         .album-grid {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
             max-height: 350px; overflow-y: auto; margin-top: 15px;
@@ -180,19 +179,18 @@
         }
         .album-item img { width: 100%; height: 100%; object-fit: cover; }
         .album-del-btn {
-            position: absolute; top: 5px; right: 5px; background: rgba(239, 68, 68, 0.8);
+            position: absolute; top: 5px; right: 5px; background: rgba(239, 68, 68, 0.85);
             color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px;
             cursor: pointer; font-size: 0.8rem; display: flex; justify-content: center; align-items: center;
         }
 
-        /* 个人卡片与权限管理 */
+        /* 个人卡片与超级管理员管理权 */
         .profile-modal-card { text-align: center; }
         .profile-avatar-large { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #d4af37; margin: 0 auto 15px; object-fit: cover; }
         .profile-info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; }
         .profile-info-label { color: #d4af37; }
         .profile-info-val { color: #eee; }
 
-        /* 序章强制全屏 */
         .prologue-overlay {
             position: fixed; inset: 0; background: #000; z-index: 20000;
             display: none; flex-direction: column; justify-content: flex-end; padding: 40px;
@@ -253,7 +251,7 @@
 
     <!-- 3. 主控制台菜单 -->
     <div id="main-dashboard" class="main-dashboard">
-        <div class="user-profile-bar" onclick="openProfileCard()">
+        <div class="user-profile-bar" onclick="openProfileCard(currentUser.nickname)">
             <div class="user-details">
                 <div class="user-nickname"><span id="user-nickname-display">玩家昵称</span><span id="role-tag-display" class="user-role-tag" style="display:none;">管理员</span></div>
                 <div id="user-race-display" class="user-race">种族</div>
@@ -272,10 +270,10 @@
                 <div class="card-title">万神圣坛 · 论坛</div>
                 <div class="card-desc">全服言论集散地（支持管理员撤回/禁言）</div>
             </div>
-            <div class="glass-card medium" onclick="openAlbumModal()">
+            <div class="glass-card medium" onclick="openAlbumModal(currentUser.nickname)">
                 <div class="card-icon">🖼️</div>
                 <div class="card-title">灵魂相册</div>
-                <div class="card-desc">个人专属照片回忆录</div>
+                <div class="card-desc">浏览与管理回忆相册</div>
             </div>
             <div class="glass-card small" onclick="startPrologueGame(true)">
                 <div class="card-icon">📜</div>
@@ -305,23 +303,24 @@
         </div>
     </div>
 
-    <!-- 5. 个人相册弹窗 -->
+    <!-- 5. 灵魂相册弹窗 (所有所有人可查看，仅主人与超级管理员可删除/上传) -->
     <div id="album-modal" class="modal-overlay">
         <div class="modal-card" style="max-width: 500px;">
             <div class="close-btn" style="position:absolute; top:15px; right:20px;" onclick="closeAlbumModal()">&times;</div>
-            <h2 class="modal-title">🖼️ 灵魂相册</h2>
-            <p class="modal-subtitle">只有你能查看并上传你的个人回忆</p>
-            <button class="submit-btn" style="margin-bottom: 15px;" onclick="triggerAlbumUpload()">+ 上传新照片</button>
+            <h2 id="album-title" class="modal-title">🖼️ 灵魂相册</h2>
+            <p id="album-subtitle" class="modal-subtitle">公开相册展示</p>
+            <button id="album-upload-btn" class="submit-btn" style="margin-bottom: 15px; display:none;" onclick="triggerAlbumUpload()">+ 上传新照片</button>
             <div id="album-grid" class="album-grid"></div>
         </div>
     </div>
 
-    <!-- 6. 个人中心与权限赋予 -->
+    <!-- 6. 个人中心卡片与超级管理员管理处 -->
     <div id="profile-modal" class="modal-overlay">
         <div class="modal-card profile-modal-card">
             <div class="close-btn" style="position:absolute; top:15px; right:20px;" onclick="closeProfileCard()">&times;</div>
             <img id="pf-avatar" class="profile-avatar-large" src="" />
             <h3 id="pf-nickname" style="color:#d4af37; margin-bottom:15px;">-</h3>
+            
             <div class="profile-info-row">
                 <span class="profile-info-label">权限级别</span>
                 <span id="pf-role" class="profile-info-val">-</span>
@@ -330,19 +329,19 @@
                 <span class="profile-info-label">契约阵营</span>
                 <span id="pf-race" class="profile-info-val">-</span>
             </div>
-            <div class="profile-info-row">
-                <span class="profile-info-label">灵魂邮箱</span>
-                <span id="pf-email" class="profile-info-val">-</span>
-            </div>
-            <!-- 超级管理员专享：赋予管理员权限按纽 -->
+
+            <!-- 超级管理员独占：一键清除该玩家违规头像按纽 -->
+            <button id="super-admin-reset-avatar-btn" class="submit-btn" style="background:#ef4444; color:#fff; display:none; margin-top:12px; padding:8px;" onclick="superAdminResetAvatar()">🚨 强行重置该玩家违规头像</button>
+
+            <!-- 超级管理员授权操作区域 -->
             <div id="super-admin-panel" style="display:none; margin-top:15px;">
-                <input type="text" id="target-user-input" placeholder="输入要设为管理员的玩家昵称" style="width:100%; padding:8px; margin-bottom:8px; background:rgba(255,255,255,0.1); border:1px solid #d4af37; color:#fff; border-radius:6px;" />
+                <input type="text" id="target-user-input" placeholder="输入玩家昵称" style="width:100%; padding:8px; margin-bottom:8px; background:rgba(255,255,255,0.1); border:1px solid #d4af37; color:#fff; border-radius:6px;" />
                 <button onclick="toggleAdminRole()" class="submit-btn" style="padding:8px;">赋予 / 撤销 管理员权限</button>
             </div>
         </div>
     </div>
 
-    <!-- 7. 序章对话（强制过场逻辑） -->
+    <!-- 7. 强制序章界面 -->
     <div id="prologue-modal" class="prologue-overlay">
         <div id="prologue-skip-btn" class="close-btn" style="position:absolute; top:25px; right:35px; z-index:20001; display:none;" onclick="exitPrologue()">&times; 退出序章</div>
         <div class="dialog-box">
@@ -353,11 +352,13 @@
     </div>
 
     <script>
-        // 设置你的专属超级管理员账号昵称！(修改这里为你的常用注册昵称)
-        const SUPER_ADMIN_NAME = "问彩蝶"; 
+        // 绝对超级管理员昵称 (修改为你自己的昵称)
+        const SUPER_ADMIN_NAME = "河彩蝶"; 
 
         let deviceVisitorId = "";
         let currentUser = null;
+        let currentViewingAlbumUser = ""; // 当前正在查看谁的相册
+        let currentViewingProfileUser = ""; // 当前正在查看谁的资料卡
         let lastPostTime = 0;
         const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/bottts/svg?seed=goat";
 
@@ -373,16 +374,14 @@
                 currentUser = JSON.parse(savedUser);
                 checkUserRole();
                 
-                // 判断是否完成过序章（第一次登录强制序章）
                 if (!currentUser.hasFinishedPrologue) {
-                    startPrologueGame(false); // 强制作答，无法手动跳过
+                    startPrologueGame(false);
                 } else {
                     enterDashboard();
                 }
             }
         });
 
-        // 检查与判定管理员权限
         function checkUserRole() {
             const adminList = JSON.parse(localStorage.getItem('admin_list') || '[]');
             if (currentUser.nickname === SUPER_ADMIN_NAME) {
@@ -424,7 +423,7 @@
             currentUser = { 
                 nickname, race, email, deviceId, 
                 avatar: DEFAULT_AVATAR, 
-                hasFinishedPrologue: false, // 初始未过序章
+                hasFinishedPrologue: false,
                 album: [] 
             };
             checkUserRole();
@@ -433,7 +432,7 @@
             showModalMsg('契约签订成功！即将开启序章试炼...', 'success');
             setTimeout(() => {
                 document.getElementById('register-modal').classList.remove('active');
-                startPrologueGame(false); // 强制第一次进行序章
+                startPrologueGame(false);
             }, 1000);
         }
 
@@ -444,7 +443,6 @@
             document.getElementById('user-race-display').innerText = `阵营: ${currentUser.race}`;
             document.getElementById('user-avatar-img').src = currentUser.avatar || DEFAULT_AVATAR;
 
-            // 展示管理员标签
             const tagEl = document.getElementById('role-tag-display');
             if (currentUser.role === 'SUPER_ADMIN') {
                 tagEl.innerText = '超级主神'; tagEl.style.display = 'inline-block';
@@ -455,8 +453,9 @@
             }
         }
 
-        /* 个人相册功能 */
-        function openAlbumModal() {
+        /* ====== 公开相册与权限控制 ====== */
+        function openAlbumModal(targetNickname) {
+            currentViewingAlbumUser = targetNickname || currentUser.nickname;
             renderAlbum();
             document.getElementById('album-modal').classList.add('active');
         }
@@ -471,6 +470,12 @@
                     if (!currentUser.album) currentUser.album = [];
                     currentUser.album.push(e.target.result);
                     localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+                    
+                    // 同步存储全局相册集
+                    let allAlbums = JSON.parse(localStorage.getItem('all_user_albums') || '{}');
+                    allAlbums[currentUser.nickname] = currentUser.album;
+                    localStorage.setItem('all_user_albums', JSON.stringify(allAlbums));
+
                     renderAlbum();
                 };
                 reader.readAsDataURL(file);
@@ -478,48 +483,103 @@
         }
 
         function renderAlbum() {
+            const isOwner = (currentViewingAlbumUser === currentUser.nickname);
+            const isSuperAdmin = (currentUser.role === 'SUPER_ADMIN');
+
+            document.getElementById('album-title').innerText = `🖼️ ${currentViewingAlbumUser} 的灵魂相册`;
+            document.getElementById('album-subtitle').innerText = isOwner ? '你可以自由管理与上传你的相册照片' : '公开照片浏览';
+            
+            // 只有本人可以上传
+            document.getElementById('album-upload-btn').style.display = isOwner ? 'block' : 'none';
+
+            let allAlbums = JSON.parse(localStorage.getItem('all_user_albums') || '{}');
+            let albumList = isOwner ? (currentUser.album || []) : (allAlbums[currentViewingAlbumUser] || []);
+
             const grid = document.getElementById('album-grid');
             grid.innerHTML = '';
-            const album = currentUser.album || [];
-            if (album.length === 0) {
-                grid.innerHTML = '<div style="grid-column:span 3; color:#888; font-size:0.85rem; padding:20px;">相册为空，快上传属于你的第一张照片吧！</div>';
+
+            if (albumList.length === 0) {
+                grid.innerHTML = '<div style="grid-column:span 3; color:#888; font-size:0.85rem; padding:20px;">相册暂无任何照片</div>';
                 return;
             }
-            album.forEach((imgSrc, idx) => {
+
+            albumList.forEach((imgSrc, idx) => {
+                // 本人可删除，超级管理员也可强行删除其他人照片
+                const showDelBtn = isOwner || isSuperAdmin;
+                const delBtnHTML = showDelBtn ? `<button class="album-del-btn" onclick="deleteAlbumImg(${idx})">&times;</button>` : '';
+
                 grid.innerHTML += `
                     <div class="album-item">
                         <img src="${imgSrc}" />
-                        <button class="album-del-btn" onclick="deleteAlbumImg(${idx})">&times;</button>
+                        ${delBtnHTML}
                     </div>
                 `;
             });
         }
 
         function deleteAlbumImg(idx) {
-            currentUser.album.splice(idx, 1);
-            localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+            let allAlbums = JSON.parse(localStorage.getItem('all_user_albums') || '{}');
+            const isOwner = (currentViewingAlbumUser === currentUser.nickname);
+
+            if (isOwner) {
+                currentUser.album.splice(idx, 1);
+                localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+                allAlbums[currentUser.nickname] = currentUser.album;
+            } else {
+                if (allAlbums[currentViewingAlbumUser]) {
+                    allAlbums[currentViewingAlbumUser].splice(idx, 1);
+                }
+            }
+            localStorage.setItem('all_user_albums', JSON.stringify(allAlbums));
             renderAlbum();
         }
 
-        /* 个人卡片与超级管理员授权 */
-        function openProfileCard() {
-            document.getElementById('pf-avatar').src = currentUser.avatar || DEFAULT_AVATAR;
-            document.getElementById('pf-nickname').innerText = currentUser.nickname;
-            document.getElementById('pf-race').innerText = currentUser.race;
-            document.getElementById('pf-email').innerText = currentUser.email;
+        /* 个人中心卡片与超级管理员强行重置头像 */
+        function openProfileCard(targetNickname) {
+            currentViewingProfileUser = targetNickname || currentUser.nickname;
+            const isOwner = (currentViewingProfileUser === currentUser.nickname);
+            const isSuperAdmin = (currentUser.role === 'SUPER_ADMIN');
+
+            let allUsers = JSON.parse(localStorage.getItem('all_user_profiles') || '{}');
+            let profileData = isOwner ? currentUser : (allUsers[targetNickname] || { nickname: targetNickname, race: '未知', avatar: DEFAULT_AVATAR });
+
+            document.getElementById('pf-avatar').src = profileData.avatar || DEFAULT_AVATAR;
+            document.getElementById('pf-nickname').innerText = profileData.nickname;
+            document.getElementById('pf-race').innerText = profileData.race;
             
-            const roleName = currentUser.role === 'SUPER_ADMIN' ? '超级主神 (绝对权限)' : (currentUser.role === 'ADMIN' ? '管理者' : '普通灵魂');
+            const roleName = profileData.nickname === SUPER_ADMIN_NAME ? '超级主神' : '灵魂玩家';
             document.getElementById('pf-role').innerText = roleName;
 
-            // 只给超级管理员显示赋予权限的输入框
-            if (currentUser.role === 'SUPER_ADMIN') {
-                document.getElementById('super-admin-panel').style.display = 'block';
+            // 超级管理员删除他人违规头像的按纽
+            const resetBtn = document.getElementById('super-admin-reset-avatar-btn');
+            if (isSuperAdmin && !isOwner) {
+                resetBtn.style.display = 'block';
+            } else {
+                resetBtn.style.display = 'none';
             }
+
+            if (isSuperAdmin && isOwner) {
+                document.getElementById('super-admin-panel').style.display = 'block';
+            } else {
+                document.getElementById('super-admin-panel').style.display = 'none';
+            }
+
             document.getElementById('profile-modal').classList.add('active');
         }
         function closeProfileCard() { document.getElementById('profile-modal').classList.remove('active'); }
 
-        // 超级管理员赋予/撤销其他人管理权限
+        // 超级管理员强行清除违规头像
+        function superAdminResetAvatar() {
+            if (currentUser.role !== 'SUPER_ADMIN') return;
+            let allUsers = JSON.parse(localStorage.getItem('all_user_profiles') || '{}');
+            if (allUsers[currentViewingProfileUser]) {
+                allUsers[currentViewingProfileUser].avatar = DEFAULT_AVATAR;
+                localStorage.setItem('all_user_profiles', JSON.stringify(allUsers));
+            }
+            document.getElementById('pf-avatar').src = DEFAULT_AVATAR;
+            alert(`已强制清除玩家 ${currentViewingProfileUser} 的违规头像！`);
+        }
+
         function toggleAdminRole() {
             const targetName = document.getElementById('target-user-input').value.trim();
             if (!targetName) return alert('请输入玩家昵称！');
@@ -536,7 +596,7 @@
             document.getElementById('target-user-input').value = '';
         }
 
-        /* 论坛 + 撤回/禁言管理 */
+        /* 论坛与管理按纽 */
         function openForum() { renderPosts(); document.getElementById('forum-modal').classList.add('active'); }
         function closeForum() { document.getElementById('forum-modal').classList.remove('active'); }
 
@@ -551,7 +611,7 @@
                             <span class="post-author">创世神谕 [系统]</span>
                             <span class="post-time">系统广播</span>
                         </div>
-                        <div class="post-text">欢迎来到万神圣坛！论坛已集成管理员管理机制。</div>
+                        <div class="post-text">点击玩家头像可公开查看其个人卡片或相册！</div>
                     </div>
                 </div>
             `;
@@ -565,10 +625,10 @@
 
                 body.insertAdjacentHTML('beforeend', `
                     <div class="post-item">
-                        <img class="post-avatar" src="${p.avatar || DEFAULT_AVATAR}" />
+                        <img class="post-avatar" src="${p.avatar || DEFAULT_AVATAR}" onclick="openAlbumModal('${p.nickname}')" title="查看该玩家相册" />
                         <div class="post-content-box">
                             <div class="post-meta">
-                                <span class="post-author">${escapeHtml(p.nickname)} (${p.race}) ${adminControls}</span>
+                                <span class="post-author" onclick="openProfileCard('${p.nickname}')">${escapeHtml(p.nickname)} (${p.race})</span> ${adminControls}
                                 <span class="post-time">${p.time}</span>
                             </div>
                             <div class="post-text">${escapeHtml(p.text)}</div>
@@ -579,7 +639,6 @@
             body.scrollTop = body.scrollHeight;
         }
 
-        // 管理员撤回发言
         function deletePost(idx) {
             let posts = JSON.parse(localStorage.getItem('forum_posts') || '[]');
             posts.splice(idx, 1);
@@ -587,10 +646,9 @@
             renderPosts();
         }
 
-        // 管理员禁言玩家 5 分钟
         function muteUser(targetNickname) {
             let muteMap = JSON.parse(localStorage.getItem('mute_map') || '{}');
-            muteMap[targetNickname] = Date.now() + 5 * 60 * 1000; // 禁言5分钟
+            muteMap[targetNickname] = Date.now() + 5 * 60 * 1000;
             localStorage.setItem('mute_map', JSON.stringify(muteMap));
             alert(`玩家 ${targetNickname} 已被禁言 5 分钟！`);
         }
@@ -600,7 +658,6 @@
             const text = input.value.trim();
             if (!text) return;
 
-            // 检查禁言
             let muteMap = JSON.parse(localStorage.getItem('mute_map') || '{}');
             if (muteMap[currentUser.nickname] && Date.now() < muteMap[currentUser.nickname]) {
                 const remaining = Math.ceil((muteMap[currentUser.nickname] - Date.now()) / 1000 / 60);
@@ -629,7 +686,7 @@
             renderPosts();
         }
 
-        /* 序章对话与强制通关记录 */
+        /* 序章对话系统 */
         const storyData = {
             start: {
                 speaker: "未知迷雾",
@@ -674,7 +731,6 @@
 
         function renderDialogue(nodeKey) {
             if (nodeKey === 'finish') {
-                // 标记玩家已完成序章
                 currentUser.hasFinishedPrologue = true;
                 localStorage.setItem('soul_contract', JSON.stringify(currentUser));
                 exitPrologue();
@@ -707,6 +763,11 @@
                     currentUser.avatar = e.target.result;
                     localStorage.setItem('soul_contract', JSON.stringify(currentUser));
                     document.getElementById('user-avatar-img').src = e.target.result;
+
+                    // 同步存储全局用户信息
+                    let allUsers = JSON.parse(localStorage.getItem('all_user_profiles') || '{}');
+                    allUsers[currentUser.nickname] = currentUser;
+                    localStorage.setItem('all_user_profiles', JSON.stringify(allUsers));
                 };
                 reader.readAsDataURL(file);
             }
