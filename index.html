@@ -3,234 +3,347 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>God and the Goat | God and the Goat</title>
-    <!-- 引入设备指纹库 (用于判断设备唯一性) -->
+    <title>God and the Goat | 神 与 羊</title>
     <script src="https://openfpcdn.io/fingerprintjs/v3/umd.min.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            height: 100vh;
-            width: 100vw;
-            background: radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.85) 100%), url('/static/bg.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
+            height: 100vh; width: 100vw;
+            background: radial-gradient(circle, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.9) 100%), url('/static/bg.jpg');
+            background-size: cover; background-position: center; background-repeat: no-repeat;
             background-color: #0b0f19;
-            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Georgia", serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
+            color: #fff; overflow: hidden; position: relative;
         }
 
+        /* 登录前主页元素 */
+        .landing-container {
+            height: 100%; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; text-align: center;
+        }
         h1.art-title {
-            font-size: 4.5rem;
-            font-weight: 800;
-            letter-spacing: 5px;
-            margin-bottom: 12px;
+            font-size: 4.5rem; font-weight: 800; letter-spacing: 5px; margin-bottom: 12px;
             background: linear-gradient(180deg, #ffffff 0%, #d4af37 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.9));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
         }
-
-        p.subtitle {
-            font-size: 1.4rem;
-            color: rgba(255, 255, 255, 0.85);
-            margin-bottom: 45px;
-            font-weight: 300;
-            letter-spacing: 6px;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-        }
-
+        p.subtitle { font-size: 1.4rem; color: rgba(255, 255, 255, 0.85); margin-bottom: 45px; letter-spacing: 6px; }
         .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 14px 42px;
-            font-size: 1.05rem;
-            font-weight: 500;
-            color: #0f172a;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            border-radius: 50px;
+            padding: 14px 42px; font-size: 1.05rem; font-weight: 500; color: #0f172a;
+            border: none; cursor: pointer; border-radius: 50px;
             background: linear-gradient(135deg, #fbf5b7 0%, #d4af37 100%);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5); transition: all 0.3s;
         }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(212, 175, 55, 0.5); }
 
-        .btn:hover {
-            transform: translateY(-4px) scale(1.03);
-            box-shadow: 0 12px 30px rgba(212, 175, 55, 0.5);
-            background: linear-gradient(135deg, #ffffff 0%, #fbf5b7 100%);
-        }
-
-        /* 注册弹窗样式 */
+        /* 弹窗通用基础 */
         .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
             display: flex; justify-content: center; align-items: center;
-            z-index: 9999;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
+            z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.3s ease;
         }
-
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
+        .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-card {
-            background: rgba(15, 23, 42, 0.95);
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            border-radius: 16px;
-            padding: 35px 30px;
-            width: 90%; max-width: 400px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(212, 175, 55, 0.2);
-            color: #fff;
-            text-align: left;
+            background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 16px; padding: 35px 30px; width: 90%; max-width: 400px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8); text-align: left; position: relative;
         }
-
-        .modal-title { 
-            font-size: 1.5rem; 
-            margin-bottom: 6px; 
-            text-align: center; 
-            color: #d4af37; 
-            letter-spacing: 2px;
-        }
-        
-        .modal-subtitle { 
-            font-size: 0.85rem; 
-            color: rgba(255, 255, 255, 0.7); 
-            text-align: center; 
-            margin-bottom: 25px; 
-        }
-
+        .modal-title { font-size: 1.5rem; text-align: center; color: #d4af37; margin-bottom: 6px; }
+        .modal-subtitle { font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); text-align: center; margin-bottom: 25px; }
         .form-group { margin-bottom: 18px; }
-        .form-group label { 
-            display: block; 
-            font-size: 0.85rem; 
-            color: #d4af37; 
-            margin-bottom: 6px; 
-            letter-spacing: 1px;
-        }
-
+        .form-group label { display: block; font-size: 0.85rem; color: #d4af37; margin-bottom: 6px; }
         .form-group input, .form-group select {
-            width: 100%; padding: 12px 14px;
-            background: rgba(255, 255, 255, 0.05); 
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 8px; color: #fff; font-size: 0.95rem;
-            box-sizing: border-box; outline: none;
-            transition: border 0.3s ease;
+            width: 100%; padding: 12px 14px; background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; color: #fff; outline: none;
         }
-        .form-group select option {
-            background: #0f172a;
-            color: #fff;
-        }
-        .form-group input:focus, .form-group select:focus { 
-            border-color: #d4af37; 
-            background: rgba(255, 255, 255, 0.1);
-        }
-
         .submit-btn {
             width: 100%; padding: 13px; margin-top: 10px;
             background: linear-gradient(135deg, #fbf5b7 0%, #d4af37 100%);
-            color: #0f172a; border: none;
-            border-radius: 50px; font-size: 1rem; font-weight: bold;
-            cursor: pointer; transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            color: #0f172a; border: none; border-radius: 50px; font-weight: bold; cursor: pointer;
         }
-        .submit-btn:hover { 
-            background: linear-gradient(135deg, #ffffff 0%, #fbf5b7 100%);
-            transform: translateY(-2px);
-        }
-
         .msg-box { font-size: 0.85rem; padding: 10px; border-radius: 6px; margin-bottom: 15px; text-align: center; }
-        .msg-box.error { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .msg-box.success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .msg-box.error { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .msg-box.success { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+
+        /* ====== 新主页 (毛玻璃方块菜单) ====== */
+        .main-dashboard {
+            display: none; height: 100%; width: 100%; padding: 40px;
+            flex-direction: column; justify-content: center; align-items: center; position: relative;
+        }
+        .main-dashboard.active { display: flex; }
+
+        /* 右上角玩家个人信息卡片 */
+        .user-profile-bar {
+            position: absolute; top: 25px; right: 35px;
+            display: flex; align-items: center; gap: 15px;
+            background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 40px;
+            padding: 6px 18px 6px 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); cursor: pointer;
+            transition: all 0.2s;
+        }
+        .user-profile-bar:hover { border-color: #d4af37; background: rgba(255, 255, 255, 0.12); }
+        .avatar-wrapper {
+            position: relative; width: 44px; height: 44px; border-radius: 50%;
+            overflow: hidden; border: 2px solid #d4af37; flex-shrink: 0;
+        }
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1/1; }
+        .avatar-hover-tip {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; color: #fff; opacity: 0; transition: opacity 0.2s;
+        }
+        .avatar-wrapper:hover .avatar-hover-tip { opacity: 1; }
+        #avatar-file-input { display: none; }
+        
+        .user-details { text-align: right; }
+        .user-nickname { font-weight: bold; color: #fbf5b7; font-size: 0.95rem; }
+        .user-race { font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); }
+
+        /* 各种大小的毛玻璃方块菜单网格 */
+        .grid-menu {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+            width: 100%; max-width: 900px; margin-top: 20px;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px;
+            padding: 30px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-decoration: none; color: #fff;
+        }
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(212, 175, 55, 0.6);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(212, 175, 55, 0.2);
+        }
+        .glass-card.large { grid-column: span 2; height: 180px; }
+        .glass-card.medium { grid-column: span 1; height: 180px; }
+        .glass-card.small { grid-column: span 1; height: 130px; }
+        
+        .card-icon { font-size: 2.2rem; margin-bottom: 10px; }
+        .card-title { font-size: 1.3rem; font-weight: 600; color: #fbf5b7; letter-spacing: 2px; }
+        .card-desc { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 6px; }
+
+        /* ====== 论坛界面弹窗/界面 ====== */
+        .forum-modal {
+            position: fixed; inset: 0; background: rgba(11, 15, 25, 0.92);
+            backdrop-filter: blur(12px); z-index: 10000; display: none;
+            flex-direction: column; padding: 30px;
+        }
+        .forum-modal.active { display: flex; }
+        .forum-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 15px; margin-bottom: 20px;
+        }
+        .forum-title { font-size: 1.6rem; color: #d4af37; }
+        .close-btn { font-size: 1.8rem; cursor: pointer; color: #aaa; transition: color 0.2s; }
+        .close-btn:hover { color: #fff; }
+
+        .forum-body { flex: 1; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 16px; }
+        .post-item {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px; padding: 14px 18px; display: flex; gap: 15px; align-items: flex-start;
+        }
+        .post-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #d4af37; }
+        .post-content-box { flex: 1; text-align: left; }
+        .post-meta { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .post-author { font-size: 0.9rem; font-weight: bold; color: #fbf5b7; }
+        .post-time { font-size: 0.75rem; color: #777; }
+        .post-text { font-size: 0.95rem; color: #ddd; line-height: 1.4; }
+
+        .forum-footer { margin-top: 15px; display: flex; gap: 12px; }
+        .forum-input {
+            flex: 1; padding: 14px 18px; background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 30px;
+            color: #fff; outline: none; font-size: 0.95rem;
+        }
+        .send-btn {
+            padding: 0 28px; background: linear-gradient(135deg, #fbf5b7 0%, #d4af37 100%);
+            color: #0f172a; border: none; border-radius: 30px; font-weight: bold; cursor: pointer;
+        }
+        .send-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+        /* ====== 新增模块：个人资料详情弹窗 ====== */
+        .profile-modal-card { text-align: center; }
+        .profile-avatar-large { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #d4af37; margin: 0 auto 15px; object-fit: cover; }
+        .profile-info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; }
+        .profile-info-label { color: #d4af37; }
+        .profile-info-val { color: #eee; }
+
+        /* ====== 新增模块：序章对话界面 ====== */
+        .prologue-overlay {
+            position: fixed; inset: 0; background: #000; z-index: 20000;
+            display: none; flex-direction: column; justify-content: flex-end; padding: 40px;
+        }
+        .prologue-overlay.active { display: flex; }
+        .dialog-box {
+            background: rgba(15, 23, 42, 0.9); border: 2px solid #d4af37;
+            border-radius: 16px; padding: 25px; width: 100%; max-width: 900px; margin: 0 auto;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.3); text-align: left;
+        }
+        .speaker-name { font-size: 1.2rem; color: #d4af37; font-weight: bold; margin-bottom: 10px; }
+        .dialog-text { font-size: 1.1rem; line-height: 1.6; color: #f0f0f0; min-height: 60px; }
+        .options-container { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .dialog-opt-btn {
+            padding: 12px 20px; background: rgba(212, 175, 55, 0.1); border: 1px solid #d4af37;
+            color: #fbf5b7; border-radius: 8px; cursor: pointer; text-align: left; transition: all 0.2s;
+        }
+        .dialog-opt-btn:hover { background: rgba(212, 175, 55, 0.3); transform: translateX(5px); }
     </style>
 </head>
 <body>
 
-    <h1 class="art-title">God and the Goat</h1>
-    <p class="subtitle">神 与 羊</p>
-    
-    <button class="btn" onclick="openRegister()">探索序章 <span style="margin-left: 6px;">→</span></button>
+    <!-- 1. 落地开场页 -->
+    <div id="landing-page" class="landing-container">
+        <h1 class="art-title">God and the Goat</h1>
+        <p class="subtitle">神 与 山 羊</p>
+        <button class="btn" onclick="openRegister()">探索序章 <span style="margin-left: 6px;">→</span></button>
+    </div>
 
-    <!-- 注册弹窗 -->
+    <!-- 2. 契约弹窗 -->
     <div id="register-modal" class="modal-overlay">
       <div class="modal-card">
         <h2 class="modal-title">神与羊：序章契约</h2>
         <p class="modal-subtitle">单台设备仅可绑定一个灵魂契约</p>
-        
         <form id="register-form" onsubmit="handleRegister(event)">
-          <!-- 1. 灵魂昵称 (唯一) -->
           <div class="form-group">
             <label for="reg-nickname">灵魂昵称</label>
             <input type="text" id="reg-nickname" placeholder="请输入唯一昵称" required maxlength="16" />
           </div>
-
-          <!-- 2. 所属种族 -->
           <div class="form-group">
-            <label for="reg-race">所属阵营</label>
+            <label for="reg-race">所属种族</label>
             <select id="reg-race" required>
-              <option value="" disabled selected>-- 请选择你的阵营 --</option>
+              <option value="" disabled selected>-- 请选择你的阵营/种族 --</option>
               <option value="天堂">天堂 (Heaven)</option>
               <option value="人间">人间 (Mortal)</option>
               <option value="地狱">地狱 (Hell)</option>
             </select>
           </div>
-
-          <!-- 3. 灵魂邮箱 -->
           <div class="form-group">
             <label for="reg-email">灵魂邮箱</label>
             <input type="email" id="reg-email" placeholder="name@example.com" required />
           </div>
-
-          <!-- 提示框 -->
           <div id="modal-msg" class="msg-box" style="display:none;"></div>
-
           <button type="submit" id="submit-btn" class="submit-btn">签订契约并进入</button>
         </form>
       </div>
     </div>
 
+    <!-- 3. 登录后的主菜单界面 -->
+    <div id="main-dashboard" class="main-dashboard">
+        <!-- 右上角玩家信息栏 (点击可唤出个人卡片) -->
+        <div class="user-profile-bar" onclick="openProfileCard()">
+            <div class="user-details">
+                <div id="user-nickname-display" class="user-nickname">玩家昵称</div>
+                <div id="user-race-display" class="user-race">种族</div>
+            </div>
+            <div class="avatar-wrapper" onclick="event.stopPropagation(); triggerAvatarUpload();">
+                <img id="user-avatar-img" class="avatar-img" src="https://api.dicebear.com/7.x/bottts/svg?seed=goat" alt="头像" />
+                <div class="avatar-hover-tip">修改</div>
+            </div>
+            <input type="file" id="avatar-file-input" accept="image/*" onchange="handleAvatarChange(event)" />
+        </div>
+
+        <!-- 毛玻璃方块菜单 -->
+        <div class="grid-menu">
+            <div class="glass-card large" onclick="openForum()">
+                <div class="card-icon">🏛️</div>
+                <div class="card-title">万神圣坛 · 论坛</div>
+                <div class="card-desc">全服玩家自由言论集散地，分享灵魂契约心得</div>
+            </div>
+            <div class="glass-card medium" onclick="startPrologueGame()">
+                <div class="card-icon">📜</div>
+                <div class="card-title">开启序章</div>
+                <div class="card-desc">探索灵魂抉择</div>
+            </div>
+            <div class="glass-card small" onclick="alert('阵营图鉴系统开发中...')">
+                <div class="card-icon">⚔️</div>
+                <div class="card-title">阵营圣典</div>
+            </div>
+            <div class="glass-card small" onclick="alert('契约榜单整理中...')">
+                <div class="card-icon">🏆</div>
+                <div class="card-title">灵魂榜单</div>
+            </div>
+            <div class="glass-card small" onclick="alert('系统设置功能暂未开放')">
+                <div class="card-icon">⚙️</div>
+                <div class="card-title">系统设置</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 论坛界面弹窗 -->
+    <div id="forum-modal" class="forum-modal">
+        <div class="forum-header">
+            <div class="forum-title">🏛️ 万神圣坛论坛</div>
+            <div class="close-btn" onclick="closeForum()">&times;</div>
+        </div>
+        <div id="forum-body" class="forum-body"></div>
+        <div class="forum-footer">
+            <input type="text" id="forum-input" class="forum-input" placeholder="撰写你的发言（CD: 5秒）..." maxlength="100" />
+            <button id="send-btn" class="send-btn" onclick="sendPost()">发送</button>
+        </div>
+    </div>
+
+    <!-- 5. 新增：玩家个人中心弹窗 -->
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-card profile-modal-card">
+            <div class="close-btn" style="position:absolute; top:15px; right:20px;" onclick="closeProfileCard()">&times;</div>
+            <img id="pf-avatar" class="profile-avatar-large" src="" />
+            <h3 id="pf-nickname" style="color:#d4af37; margin-bottom:15px;">-</h3>
+            <div class="profile-info-row">
+                <span class="profile-info-label">契约阵营</span>
+                <span id="pf-race" class="profile-info-val">-</span>
+            </div>
+            <div class="profile-info-row">
+                <span class="profile-info-label">灵魂邮箱</span>
+                <span id="pf-email" class="profile-info-val">-</span>
+            </div>
+            <div class="profile-info-row">
+                <span class="profile-info-label">设备绑定 ID</span>
+                <span id="pf-device" class="profile-info-val" style="font-size:0.75rem;">-</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. 新增：序章剧情对话界面 -->
+    <div id="prologue-modal" class="prologue-overlay">
+        <div class="close-btn" style="position:absolute; top:25px; right:35px; z-index:20001;" onclick="exitPrologue()">&times; 退出序章</div>
+        <div class="dialog-box">
+            <div id="speaker-name" class="speaker-name">神秘声音</div>
+            <div id="dialog-text" class="dialog-text">...</div>
+            <div id="options-container" class="options-container"></div>
+        </div>
+    </div>
+
     <script>
         let deviceVisitorId = "";
+        let currentUser = null;
+        let lastPostTime = 0;
+        const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/bottts/svg?seed=goat";
 
-        // 1. 页面加载初始化设备指纹
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 const fp = await FingerprintJS.load();
                 const result = await fp.get();
                 deviceVisitorId = result.visitorId;
-            } catch (e) {
-                console.error('设备指纹加载异常:', e);
+            } catch (e) {}
+
+            const savedUser = localStorage.getItem('soul_contract');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                enterDashboard();
             }
         });
 
-        // 2. 点击“探索序章”按钮触发
         function openRegister() {
-            const localUser = localStorage.getItem('soul_contract');
-            if (localUser) {
-                const user = JSON.parse(localUser);
-                alert(`欢迎回来，来自【${user.race}】的 ${user.nickname}！即将进入序章...`);
-                return;
-            }
+            if (currentUser) { enterDashboard(); return; }
             document.getElementById('register-modal').classList.add('active');
         }
 
-        // 3. 提示框
         function showModalMsg(text, type = 'error') {
             const msgEl = document.getElementById('modal-msg');
             msgEl.innerText = text;
@@ -238,38 +351,198 @@
             msgEl.style.display = 'block';
         }
 
-        // 4. 本地前端契约逻辑（离线响应，无需后端 API）
         function handleRegister(event) {
             event.preventDefault();
-            
             const nickname = document.getElementById('reg-nickname').value.trim();
             const race = document.getElementById('reg-race').value;
             const email = document.getElementById('reg-email').value.trim();
 
-            if (!nickname || !race || !email) {
-                showModalMsg('请完整填写所有信息！', 'error');
-                return;
-            }
+            if (!nickname || !race || !email) { showModalMsg('请完整填写！', 'error'); return; }
 
             const deviceId = deviceVisitorId || localStorage.getItem('backup_device_id') || Math.random().toString(36).substring(2);
             localStorage.setItem('backup_device_id', deviceId);
 
-            // 设备限制检查
-            const existingContract = localStorage.getItem('soul_contract');
-            if (existingContract) {
-                showModalMsg('该设备已签订过契约，无法重复创建！', 'error');
-                return;
-            }
+            currentUser = { nickname, race, email, deviceId, avatar: DEFAULT_AVATAR };
+            localStorage.setItem('soul_contract', JSON.stringify(currentUser));
 
-            // 保存用户契约
-            const userData = { nickname, race, email, deviceId, createdAt: new Date().toISOString() };
-            localStorage.setItem('soul_contract', JSON.stringify(userData));
-
-            showModalMsg('契约签订成功！正在进入游戏...', 'success');
-
+            showModalMsg('契约签订成功！进入主界面...', 'success');
             setTimeout(() => {
                 document.getElementById('register-modal').classList.remove('active');
-            }, 1200);
+                enterDashboard();
+            }, 1000);
+        }
+
+        function enterDashboard() {
+            document.getElementById('landing-page').style.display = 'none';
+            document.getElementById('main-dashboard').classList.add('active');
+            document.getElementById('user-nickname-display').innerText = currentUser.nickname;
+            document.getElementById('user-race-display').innerText = `阵营: ${currentUser.race}`;
+            document.getElementById('user-avatar-img').src = currentUser.avatar || DEFAULT_AVATAR;
+        }
+
+        function triggerAvatarUpload() { document.getElementById('avatar-file-input').click(); }
+        function handleAvatarChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentUser.avatar = e.target.result;
+                    localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+                    document.getElementById('user-avatar-img').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        /* 个人卡片逻辑 */
+        function openProfileCard() {
+            document.getElementById('pf-avatar').src = currentUser.avatar || DEFAULT_AVATAR;
+            document.getElementById('pf-nickname').innerText = currentUser.nickname;
+            document.getElementById('pf-race').innerText = currentUser.race;
+            document.getElementById('pf-email').innerText = currentUser.email;
+            document.getElementById('pf-device').innerText = currentUser.deviceId;
+            document.getElementById('profile-modal').classList.add('active');
+        }
+        function closeProfileCard() { document.getElementById('profile-modal').classList.remove('active'); }
+
+        /* 论坛逻辑 (本地持久化模拟全服) */
+        function openForum() {
+            renderPosts();
+            document.getElementById('forum-modal').classList.add('active');
+        }
+        function closeForum() { document.getElementById('forum-modal').classList.remove('active'); }
+
+        function renderPosts() {
+            const posts = JSON.parse(localStorage.getItem('forum_posts') || '[]');
+            const body = document.getElementById('forum-body');
+            body.innerHTML = `
+                <div class="post-item">
+                    <img class="post-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=god" />
+                    <div class="post-content-box">
+                        <div class="post-meta">
+                            <span class="post-author">创世神谕 [系统]</span>
+                            <span class="post-time">系统广播</span>
+                        </div>
+                        <div class="post-text">欢迎来到万神圣坛！凡签订契约者皆可在此自由发言。请遵守秩序，每条发言 CD 为 5 秒。</div>
+                    </div>
+                </div>
+            `;
+            posts.forEach(p => {
+                body.insertAdjacentHTML('beforeend', `
+                    <div class="post-item">
+                        <img class="post-avatar" src="${p.avatar || DEFAULT_AVATAR}" />
+                        <div class="post-content-box">
+                            <div class="post-meta">
+                                <span class="post-author">${escapeHtml(p.nickname)} (${p.race})</span>
+                                <span class="post-time">${p.time}</span>
+                            </div>
+                            <div class="post-text">${escapeHtml(p.text)}</div>
+                        </div>
+                    </div>
+                `);
+            });
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function sendPost() {
+            const input = document.getElementById('forum-input');
+            const btn = document.getElementById('send-btn');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const now = Date.now();
+            if (now - lastPostTime < 5000) {
+                alert(`发言过于频繁，请等待 ${Math.ceil((5000 - (now - lastPostTime)) / 1000)} 秒！`);
+                return;
+            }
+            lastPostTime = now;
+
+            const posts = JSON.parse(localStorage.getItem('forum_posts') || '[]');
+            posts.push({
+                nickname: currentUser.nickname,
+                race: currentUser.race,
+                avatar: currentUser.avatar,
+                text: text,
+                time: new Date().toLocaleTimeString()
+            });
+            localStorage.setItem('forum_posts', JSON.stringify(posts));
+
+            input.value = '';
+            renderPosts();
+
+            btn.disabled = true;
+            let cd = 5;
+            btn.innerText = `${cd}s`;
+            const timer = setInterval(() => {
+                cd--;
+                if (cd <= 0) { clearInterval(timer); btn.innerText = '发送'; btn.disabled = false; }
+                else { btn.innerText = `${cd}s`; }
+            }, 1000);
+        }
+
+        /* 序章剧情对话系统 */
+        const storyData = {
+            start: {
+                speaker: "未知迷雾",
+                text: "醒来吧，来自...的灵魂。你睁开眼，面前站着一只头顶长着金色羊角、散发着幽光的山羊。",
+                options: [
+                    { label: "你是谁？这里是什么地方？", next: "step1" },
+                    { label: "（保持警惕，紧握双拳）", next: "step2" }
+                ]
+            },
+            step1: {
+                speaker: "神秘山羊",
+                text: "我是这片原野的引导者。神已沉睡，而世界的秩序正在崩塌...",
+                options: [
+                    { label: "作为【阵营】的一员，我要重建这片大地！", next: "end" }
+                ]
+            },
+            step2: {
+                speaker: "神秘山羊",
+                text: "不必戒备，凡人。你的灵魂契约早已注定了你的归宿。",
+                options: [
+                    { label: "顺应契约的召唤", next: "end" }
+                ]
+            },
+            end: {
+                speaker: "创世神谕",
+                text: "【序章契约试炼完成】你的选择已印入这片土地，静待正篇开启！",
+                options: [
+                    { label: "返回主控制台", next: "exit" }
+                ]
+            }
+        };
+
+        function startPrologueGame() {
+            document.getElementById('prologue-modal').classList.add('active');
+            renderDialogue('start');
+        }
+        function exitPrologue() { document.getElementById('prologue-modal').classList.remove('active'); }
+
+        function renderDialogue(nodeKey) {
+            if (nodeKey === 'exit') { exitPrologue(); return; }
+            const node = storyData[nodeKey];
+            
+            // 替换动态变量
+            let text = node.text.replace('来自...', `来自【${currentUser.race}】`);
+            text = text.replace('【阵营】', currentUser.race);
+
+            document.getElementById('speaker-name').innerText = node.speaker;
+            document.getElementById('dialog-text').innerText = text;
+
+            const optBox = document.getElementById('options-container');
+            optBox.innerHTML = '';
+            node.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'dialog-opt-btn';
+                btn.innerText = opt.label;
+                btn.onclick = () => renderDialogue(opt.next);
+                optBox.appendChild(btn);
+            });
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
     </script>
 </body>
