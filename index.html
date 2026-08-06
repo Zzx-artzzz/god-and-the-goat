@@ -343,127 +343,126 @@
     </div>
 
     <script>
-        // 1. 指定绝对超级管理员昵称：问彩蝶
-        const SUPER_ADMIN_NAME = "问彩蝶"; 
+       <script>
+    // 绝对超级管理员昵称
+    const SUPER_ADMIN_NAME = "问彩蝶"; 
 
-        // 云端同步跨网络通道
-        const CLOUD_SYNC_URL = "https://kvdb.io/GodAndGoat2026_Final/global_state_v2";
+    // 全服公共云端存储通道
+    const CLOUD_SYNC_URL = "https://kvdb.io/GodAndGoat2026_Final/global_state_v3";
 
-        let currentUser = null;
-        let currentViewingAlbumUser = "";
-        let currentViewingProfileUser = "";
-        let pollTimer = null;
-        let globalData = { posts: [], admins: [], userProfiles: {} };
-        const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/bottts/svg?seed=goat";
+    let currentUser = null;
+    let currentViewingUser = "";
+    let pollTimer = null;
+    let globalData = { posts: [], admins: [], userProfiles: {} };
+    const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/bottts/svg?seed=goat";
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            const savedUser = localStorage.getItem('soul_contract');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                await syncCloudData();
-                checkUserRole();
-                if (!currentUser.hasFinishedPrologue) {
-                    startPrologueGame(false); // 第一次登录强行过序章
-                } else {
-                    enterDashboard();
-                }
-            }
-        });
-
-        // 云端数据同步
-        async function syncCloudData() {
-            try {
-                const res = await fetch(CLOUD_SYNC_URL);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && typeof data === 'object') {
-                        globalData = {
-                            posts: data.posts || [],
-                            admins: data.admins || [],
-                            userProfiles: data.userProfiles || {}
-                        };
-                    }
-                }
-            } catch(e) {}
-        }
-
-        async function pushCloudData() {
-            try {
-                await fetch(CLOUD_SYNC_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(globalData)
-                });
-            } catch(e) {}
-        }
-
-        function checkUserRole() {
-            if (currentUser.nickname === SUPER_ADMIN_NAME) {
-                currentUser.role = 'SUPER_ADMIN';
-            } else if (globalData.admins.includes(currentUser.nickname)) {
-                currentUser.role = 'ADMIN';
+    window.addEventListener('DOMContentLoaded', async () => {
+        const savedUser = localStorage.getItem('soul_contract');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            await syncCloudData();
+            checkUserRole();
+            if (!currentUser.hasFinishedPrologue) {
+                startPrologueGame(false);
             } else {
-                currentUser.role = 'USER';
+                enterDashboard();
             }
         }
+    });
 
-        function showModalMsg(text, type = 'error') {
-            const msgEl = document.getElementById('modal-msg');
+    async function syncCloudData() {
+        try {
+            const res = await fetch(CLOUD_SYNC_URL);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && typeof data === 'object') {
+                    globalData = {
+                        posts: data.posts || [],
+                        admins: data.admins || [],
+                        userProfiles: data.userProfiles || {}
+                    };
+                }
+            }
+        } catch(e) {}
+    }
+
+    async function pushCloudData() {
+        try {
+            await fetch(CLOUD_SYNC_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(globalData)
+            });
+        } catch(e) {}
+    }
+
+    function checkUserRole() {
+        if (currentUser.nickname === SUPER_ADMIN_NAME) {
+            currentUser.role = 'SUPER_ADMIN';
+        } else if (globalData.admins && globalData.admins.includes(currentUser.nickname)) {
+            currentUser.role = 'ADMIN';
+        } else {
+            currentUser.role = 'USER';
+        }
+    }
+
+    function showModalMsg(text, type = 'error') {
+        const msgEl = document.getElementById('modal-msg');
+        if (msgEl) {
             msgEl.innerText = text;
             msgEl.className = `msg-box ${type}`;
             msgEl.style.display = 'block';
         }
+    }
 
-        function openRegister() {
-            if (currentUser) {
-                if (!currentUser.hasFinishedPrologue) startPrologueGame(false);
-                else enterDashboard();
-                return;
-            }
-            document.getElementById('register-modal').classList.add('active');
+    function openRegister() {
+        if (currentUser) {
+            if (!currentUser.hasFinishedPrologue) startPrologueGame(false);
+            else enterDashboard();
+            return;
+        }
+        document.getElementById('register-modal').classList.add('active');
+    }
+
+    async function handleRegister(event) {
+        event.preventDefault();
+        const nickname = document.getElementById('reg-nickname').value.trim();
+        const race = document.getElementById('reg-race').value;
+        const email = document.getElementById('reg-email').value.trim();
+
+        await syncCloudData();
+
+        if (globalData.userProfiles[nickname] && nickname !== SUPER_ADMIN_NAME) {
+            showModalMsg('该灵魂昵称已被使用！', 'error');
+            return;
         }
 
-        // 账号唯一性注册逻辑
-        async function handleRegister(event) {
-            event.preventDefault();
-            const nickname = document.getElementById('reg-nickname').value.trim();
-            const race = document.getElementById('reg-race').value;
-            const email = document.getElementById('reg-email').value.trim();
+        currentUser = { 
+            nickname, race, email,
+            avatar: DEFAULT_AVATAR, 
+            hasFinishedPrologue: false,
+            album: []
+        };
 
-            await syncCloudData();
+        globalData.userProfiles[nickname] = currentUser;
+        await pushCloudData();
 
-            // 验证昵称唯一性
-            if (globalData.userProfiles[nickname] && nickname !== SUPER_ADMIN_NAME) {
-                showModalMsg('该灵魂昵称已被占用，请换一个！', 'error');
-                return;
-            }
+        checkUserRole();
+        localStorage.setItem('soul_contract', JSON.stringify(currentUser));
 
-            currentUser = { 
-                nickname, race, email,
-                avatar: DEFAULT_AVATAR, 
-                hasFinishedPrologue: false,
-                album: []
-            };
+        document.getElementById('register-modal').classList.remove('active');
+        startPrologueGame(false);
+    }
 
-            // 存入全局用户集
-            globalData.userProfiles[nickname] = currentUser;
-            await pushCloudData();
+    function enterDashboard() {
+        document.getElementById('landing-page').style.display = 'none';
+        document.getElementById('main-dashboard').classList.add('active');
+        document.getElementById('user-nickname-display').innerText = currentUser.nickname;
+        document.getElementById('user-race-display').innerText = `阵营: ${currentUser.race}`;
+        document.getElementById('user-avatar-img').src = currentUser.avatar || DEFAULT_AVATAR;
 
-            checkUserRole();
-            localStorage.setItem('soul_contract', JSON.stringify(currentUser));
-
-            document.getElementById('register-modal').classList.remove('active');
-            startPrologueGame(false); // 强制序章试炼
-        }
-
-        function enterDashboard() {
-            document.getElementById('landing-page').style.display = 'none';
-            document.getElementById('main-dashboard').classList.add('active');
-            document.getElementById('user-nickname-display').innerText = currentUser.nickname;
-            document.getElementById('user-race-display').innerText = `阵营: ${currentUser.race}`;
-            document.getElementById('user-avatar-img').src = currentUser.avatar || DEFAULT_AVATAR;
-
-            const tagEl = document.getElementById('role-tag-display');
+        const tagEl = document.getElementById('role-tag-display');
+        if (tagEl) {
             if (currentUser.role === 'SUPER_ADMIN') {
                 tagEl.innerText = '绝对主神'; tagEl.style.display = 'inline-block';
             } else if (currentUser.role === 'ADMIN') {
@@ -472,318 +471,327 @@
                 tagEl.style.display = 'none';
             }
         }
+    }
 
-        /* 论坛与发言（解决无限次发言卡死） */
-        function openForum() {
-            fetchAndRenderPosts();
-            document.getElementById('forum-modal').classList.add('active');
-            if (!pollTimer) {
-                pollTimer = setInterval(fetchAndRenderPosts, 2000); // 2秒全服自动刷新
-            }
-        }
+    /* 论坛逻辑 */
+    function openForum() {
+        fetchAndRenderPosts();
+        document.getElementById('forum-modal').classList.add('active');
+        if (!pollTimer) pollTimer = setInterval(fetchAndRenderPosts, 2000);
+    }
 
-        function closeForum() {
-            document.getElementById('forum-modal').classList.remove('active');
-            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-        }
+    function closeForum() {
+        document.getElementById('forum-modal').classList.remove('active');
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
 
-        async function fetchAndRenderPosts() {
-            await syncCloudData();
-            renderPostsUI(globalData.posts);
-        }
+    async function fetchAndRenderPosts() {
+        await syncCloudData();
+        renderPostsUI(globalData.posts);
+    }
 
-        function renderPostsUI(posts) {
-            const body = document.getElementById('forum-body');
-            body.innerHTML = `
+    function renderPostsUI(posts) {
+        const body = document.getElementById('forum-body');
+        if (!body) return;
+        body.innerHTML = `
+            <div class="post-item">
+                <img class="post-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=god" />
+                <div class="post-content-box">
+                    <div class="post-meta">
+                        <span class="post-author">创世神谕 [系统]</span>
+                        <span class="post-time">全服频道</span>
+                    </div>
+                    <div class="post-text">点击玩家头像可进入其个人主页与相册！</div>
+                </div>
+            </div>
+        `;
+
+        const canDelete = (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN');
+
+        posts.forEach((p, index) => {
+            const adminControls = canDelete ? `<span class="admin-action-btn" onclick="deletePost(${index})">撤回</span>` : '';
+
+            body.insertAdjacentHTML('beforeend', `
                 <div class="post-item">
-                    <img class="post-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=god" />
+                    <img class="post-avatar" src="${p.avatar || DEFAULT_AVATAR}" onclick="openProfileCard('${escapeHtml(p.nickname)}')" title="点击进入个人主页" />
                     <div class="post-content-box">
                         <div class="post-meta">
-                            <span class="post-author">创世神谕 [系统]</span>
-                            <span class="post-time">全服共享频道</span>
+                            <span class="post-author" onclick="openProfileCard('${escapeHtml(p.nickname)}')">${escapeHtml(p.nickname)} (${p.race}) ${adminControls}</span>
+                            <span class="post-time">${p.time}</span>
                         </div>
-                        <div class="post-text">欢迎来到万神圣坛！点击玩家头像可公开查看其主页与灵魂相册。</div>
+                        <div class="post-text">${escapeHtml(p.text)}</div>
                     </div>
                 </div>
-            `;
+            `);
+        });
+        body.scrollTop = body.scrollHeight;
+    }
 
-            const canDelete = (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN');
+    async function sendPost() {
+        const input = document.getElementById('forum-input');
+        const btn = document.getElementById('send-btn');
+        const text = input.value.trim();
+        if (!text) return;
 
-            posts.forEach((p, index) => {
-                const adminControls = canDelete ? `<span class="admin-action-btn" onclick="deletePost(${index})">撤回</span>` : '';
+        btn.disabled = true;
+        btn.innerText = "发送中...";
 
-                body.insertAdjacentHTML('beforeend', `
-                    <div class="post-item">
-                        <img class="post-avatar" src="${p.avatar || DEFAULT_AVATAR}" onclick="openProfileCard('${escapeHtml(p.nickname)}')" title="点击查看个人主页与相册" />
-                        <div class="post-content-box">
-                            <div class="post-meta">
-                                <span class="post-author" onclick="openProfileCard('${escapeHtml(p.nickname)}')">${escapeHtml(p.nickname)} (${p.race}) ${adminControls}</span>
-                                <span class="post-time">${p.time}</span>
-                            </div>
-                            <div class="post-text">${escapeHtml(p.text)}</div>
-                        </div>
-                    </div>
-                `);
-            });
-            body.scrollTop = body.scrollHeight;
-        }
-
-        // 绝对不会卡死的无限次发帖逻辑
-        async function sendPost() {
-            const input = document.getElementById('forum-input');
-            const btn = document.getElementById('send-btn');
-            const text = input.value.trim();
-            if (!text) return;
-
-            btn.disabled = true;
-            btn.innerText = "发送中...";
-
-            const newPost = {
-                nickname: currentUser.nickname,
-                race: currentUser.race,
-                avatar: currentUser.avatar,
-                text: text,
-                time: new Date().toLocaleTimeString()
-            };
-
-            globalData.posts.push(newPost);
-            if (globalData.posts.length > 60) globalData.posts.shift();
-
-            input.value = '';
-            renderPostsUI(globalData.posts);
-
-            try {
-                await pushCloudData();
-            } catch(e) {}
-
-            // 必能恢复按钮状态，保障循环发送
-            setTimeout(() => {
-                btn.innerText = '发送';
-                btn.disabled = false;
-            }, 600);
-        }
-
-        // 撤回发言
-        async function deletePost(index) {
-            if (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'ADMIN') return;
-            globalData.posts.splice(index, 1);
-            renderPostsUI(globalData.posts);
-            await pushCloudData();
-        }
-
-        /* 灵魂相册 (所有人查看，仅本人与问彩蝶可强删) */
-        function openAlbumModal(targetNickname) {
-            currentViewingAlbumUser = targetNickname || currentUser.nickname;
-            renderAlbum();
-            document.getElementById('album-modal').classList.add('active');
-        }
-        function closeAlbumModal() { document.getElementById('album-modal').classList.remove('active'); }
-
-        function triggerAlbumUpload() { document.getElementById('album-file-input').click(); }
-        function handleAlbumUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    if (!currentUser.album) currentUser.album = [];
-                    currentUser.album.push(e.target.result);
-                    localStorage.setItem('soul_contract', JSON.stringify(currentUser));
-
-                    globalData.userProfiles[currentUser.nickname] = currentUser;
-                    await pushCloudData();
-                    renderAlbum();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function renderAlbum() {
-            const isOwner = (currentViewingAlbumUser === currentUser.nickname);
-            const isSuperAdmin = (currentUser.role === 'SUPER_ADMIN');
-
-            document.getElementById('album-title').innerText = `🖼️ ${currentViewingAlbumUser} 的灵魂相册`;
-            document.getElementById('album-subtitle').innerText = isOwner ? '你可以自由管理与上传你的相册照片' : '公开个人相册展示';
-            document.getElementById('album-upload-btn').style.display = isOwner ? 'block' : 'none';
-
-            let profile = globalData.userProfiles[currentViewingAlbumUser] || (isOwner ? currentUser : { album: [] });
-            let albumList = profile.album || [];
-
-            const grid = document.getElementById('album-grid');
-            grid.innerHTML = '';
-
-            if (albumList.length === 0) {
-                grid.innerHTML = '<div style="grid-column:span 3; color:#888; font-size:0.85rem; padding:20px;">相册暂无照片</div>';
-                return;
-            }
-
-            albumList.forEach((imgSrc, idx) => {
-                // 本人可删，超级管理员问彩蝶也可强删
-                const canDeleteImg = isOwner || isSuperAdmin;
-                const delBtnHTML = canDeleteImg ? `<button class="album-del-btn" onclick="deleteAlbumImg(${idx})">&times;</button>` : '';
-
-                grid.innerHTML += `
-                    <div class="album-item">
-                        <img src="${imgSrc}" />
-                        ${delBtnHTML}
-                    </div>
-                `;
-            });
-        }
-
-        async function deleteAlbumImg(idx) {
-            const isOwner = (currentViewingAlbumUser === currentUser.nickname);
-            let profile = globalData.userProfiles[currentViewingAlbumUser] || currentUser;
-
-            if (profile.album) {
-                profile.album.splice(idx, 1);
-            }
-            if (isOwner) {
-                currentUser.album = profile.album;
-                localStorage.setItem('soul_contract', JSON.stringify(currentUser));
-            }
-            globalData.userProfiles[currentViewingAlbumUser] = profile;
-            await pushCloudData();
-            renderAlbum();
-        }
-
-        /* 个人主页卡片查看 */
-        function openProfileCard(targetNickname) {
-            currentViewingProfileUser = targetNickname || currentUser.nickname;
-            const isOwner = (currentViewingProfileUser === currentUser.nickname);
-            const isSuperAdmin = (currentUser.role === 'SUPER_ADMIN');
-
-            let profile = globalData.userProfiles[currentViewingProfileUser] || (isOwner ? currentUser : { nickname: targetNickname, race: '未知', avatar: DEFAULT_AVATAR });
-
-            document.getElementById('pf-avatar').src = profile.avatar || DEFAULT_AVATAR;
-            document.getElementById('pf-nickname').innerText = profile.nickname;
-            document.getElementById('pf-race').innerText = profile.race;
-            
-            const roleName = profile.nickname === SUPER_ADMIN_NAME ? '绝对主神' : (globalData.admins.includes(profile.nickname) ? '管理者' : '普通玩家');
-            document.getElementById('pf-role').innerText = roleName;
-
-            // 问彩蝶专属强重置违规头像按纽
-            document.getElementById('super-admin-reset-avatar-btn').style.display = (isSuperAdmin && !isOwner) ? 'block' : 'none';
-            document.getElementById('super-admin-panel').style.display = (isSuperAdmin && isOwner) ? 'block' : 'none';
-
-            document.getElementById('profile-modal').classList.add('active');
-        }
-        function closeProfileCard() { document.getElementById('profile-modal').classList.remove('active'); }
-
-        // 问彩蝶重置违规头像
-        async function superAdminResetAvatar() {
-            if (currentUser.role !== 'SUPER_ADMIN') return;
-            if (globalData.userProfiles[currentViewingProfileUser]) {
-                globalData.userProfiles[currentViewingProfileUser].avatar = DEFAULT_AVATAR;
-                await pushCloudData();
-            }
-            document.getElementById('pf-avatar').src = DEFAULT_AVATAR;
-            alert(`已强行重置玩家 ${currentViewingProfileUser} 的违规头像！`);
-        }
-
-        // 问彩蝶赋予/撤销管理者身份
-        async function toggleAdminRole() {
-            const targetName = document.getElementById('target-user-input').value.trim();
-            if (!targetName) return alert('请输入玩家昵称！');
-
-            if (globalData.admins.includes(targetName)) {
-                globalData.admins = globalData.admins.filter(n => n !== targetName);
-                alert(`已撤销 ${targetName} 的管理者身份！`);
-            } else {
-                globalData.admins.push(targetName);
-                alert(`已成功赋予 ${targetName} 管理者身份！`);
-            }
-            await pushCloudData();
-            document.getElementById('target-user-input').value = '';
-        }
-
-        function triggerAvatarUpload() { document.getElementById('avatar-file-input').click(); }
-        function handleAvatarChange(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    currentUser.avatar = e.target.result;
-                    localStorage.setItem('soul_contract', JSON.stringify(currentUser));
-                    document.getElementById('user-avatar-img').src = e.target.result;
-
-                    globalData.userProfiles[currentUser.nickname] = currentUser;
-                    await pushCloudData();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        /* 强制序章对话流程 */
-        const storyData = {
-            start: {
-                speaker: "未知迷雾",
-                text: "醒来吧，来自...的灵魂。你睁开眼，面前站着一只头顶长着金色羊角、散发着幽光的山羊。",
-                options: [
-                    { label: "你是谁？这里是什么地方？", next: "step1" },
-                    { label: "（保持警惕，紧握双拳）", next: "step2" }
-                ]
-            },
-            step1: {
-                speaker: "神秘山羊",
-                text: "我是这片原野的引导者。神已沉睡，而世界的秩序正在崩塌...",
-                options: [
-                    { label: "作为【阵营】的一员，我要重建这片大地！", next: "end" }
-                ]
-            },
-            step2: {
-                speaker: "神秘山羊",
-                text: "不必戒备，凡人。你的灵魂契约早已注定了你的归宿。",
-                options: [
-                    { label: "顺应契约的召唤", next: "end" }
-                ]
-            },
-            end: {
-                speaker: "创世神谕",
-                text: "【序章契约试炼完成】你的选择已印入这片土地！",
-                options: [
-                    { label: "完成试炼并进入主菜单", next: "finish" }
-                ]
-            }
+        const newPost = {
+            nickname: currentUser.nickname,
+            race: currentUser.race,
+            avatar: currentUser.avatar,
+            text: text,
+            time: new Date().toLocaleTimeString()
         };
 
-        function startPrologueGame(canSkipManual = false) {
-            document.getElementById('prologue-skip-btn').style.display = canSkipManual ? 'block' : 'none';
-            document.getElementById('prologue-modal').classList.add('active');
-            renderDialogue('start');
-        }
-        function exitPrologue() { 
-            document.getElementById('prologue-modal').classList.remove('active');
-            enterDashboard();
+        globalData.posts.push(newPost);
+        if (globalData.posts.length > 60) globalData.posts.shift();
+
+        input.value = '';
+        renderPostsUI(globalData.posts);
+
+        try { await pushCloudData(); } catch(e) {}
+
+        setTimeout(() => {
+            btn.innerText = '发送';
+            btn.disabled = false;
+        }, 600);
+    }
+
+    async function deletePost(index) {
+        if (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'ADMIN') return;
+        globalData.posts.splice(index, 1);
+        renderPostsUI(globalData.posts);
+        await pushCloudData();
+    }
+
+    /* 个人主页与相册功能 */
+    function openProfileCard(targetNickname) {
+        currentViewingUser = targetNickname || currentUser.nickname;
+        const isOwner = (currentViewingUser === currentUser.nickname);
+        const isSuperAdmin = (currentUser.role === 'SUPER_ADMIN');
+
+        let profile = globalData.userProfiles[currentViewingUser] || (isOwner ? currentUser : { nickname: currentViewingUser, race: '未知阵营', avatar: DEFAULT_AVATAR, album: [] });
+
+        const pfAvatar = document.getElementById('pf-avatar');
+        if (pfAvatar) pfAvatar.src = profile.avatar || DEFAULT_AVATAR;
+        
+        const pfNick = document.getElementById('pf-nickname');
+        if (pfNick) pfNick.innerText = profile.nickname;
+        
+        const pfRace = document.getElementById('pf-race');
+        if (pfRace) pfRace.innerText = profile.race;
+        
+        const pfRole = document.getElementById('pf-role');
+        if (pfRole) {
+            pfRole.innerText = profile.nickname === SUPER_ADMIN_NAME ? '绝对主神' : (globalData.admins.includes(profile.nickname) ? '管理者' : '普通玩家');
         }
 
-        function renderDialogue(nodeKey) {
-            if (nodeKey === 'finish') {
-                currentUser.hasFinishedPrologue = true;
+        const albumBtn = document.getElementById('album-upload-btn');
+        if (albumBtn) albumBtn.style.display = isOwner ? 'block' : 'none';
+
+        const resetBtn = document.getElementById('super-admin-reset-avatar-btn');
+        if (resetBtn) resetBtn.style.display = (isSuperAdmin && !isOwner) ? 'block' : 'none';
+
+        const panel = document.getElementById('super-admin-panel');
+        if (panel) panel.style.display = (isSuperAdmin && isOwner) ? 'block' : 'none';
+
+        renderAlbum(profile.album || []);
+
+        const profModal = document.getElementById('profile-modal');
+        if (profModal) profModal.classList.add('active');
+    }
+
+    function closeProfileCard() { 
+        const profModal = document.getElementById('profile-modal');
+        if (profModal) profModal.classList.remove('active'); 
+    }
+
+    function triggerAlbumUpload() {
+        const input = document.getElementById('album-file-input');
+        if (input) input.click();
+    }
+
+    function handleAlbumUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                if (!currentUser.album) currentUser.album = [];
+                currentUser.album.push(e.target.result);
                 localStorage.setItem('soul_contract', JSON.stringify(currentUser));
-                exitPrologue();
-                return;
-            }
-            const node = storyData[nodeKey];
-            let text = node.text.replace('来自...', `来自【${currentUser.race}】`);
-            text = text.replace('【阵营】', currentUser.race);
 
-            document.getElementById('speaker-name').innerText = node.speaker;
-            document.getElementById('dialog-text').innerText = text;
+                globalData.userProfiles[currentUser.nickname] = currentUser;
+                await pushCloudData();
 
-            const optBox = document.getElementById('options-container');
-            optBox.innerHTML = '';
-            node.options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'dialog-opt-btn';
-                btn.innerText = opt.label;
-                btn.onclick = () => renderDialogue(opt.next);
-                optBox.appendChild(btn);
-            });
+                openProfileCard(currentUser.nickname);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function renderAlbum(albumList) {
+        const grid = document.getElementById('album-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const isOwner = (currentViewingUser === currentUser.nickname);
+        const isSuperAdmin = (currentUser.role === 'SUPER_ADMIN');
+
+        if (!albumList || albumList.length === 0) {
+            grid.innerHTML = '<div style="grid-column:span 3; color:#888; font-size:0.85rem; padding:15px; text-align:center;">暂无相册照片</div>';
+            return;
         }
 
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        albumList.forEach((imgSrc, idx) => {
+            const canDel = isOwner || isSuperAdmin;
+            const delBtn = canDel ? `<button class="album-del-btn" onclick="deleteAlbumImg(${idx})">&times;</button>` : '';
+
+            grid.innerHTML += `
+                <div class="album-item">
+                    <img src="${imgSrc}" />
+                    ${delBtn}
+                </div>
+            `;
+        });
+    }
+
+    async function deleteAlbumImg(idx) {
+        const isOwner = (currentViewingUser === currentUser.nickname);
+        let profile = globalData.userProfiles[currentViewingUser] || currentUser;
+
+        if (profile.album) {
+            profile.album.splice(idx, 1);
         }
+        if (isOwner) {
+            currentUser.album = profile.album;
+            localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+        }
+        globalData.userProfiles[currentViewingUser] = profile;
+        await pushCloudData();
+        
+        openProfileCard(currentViewingUser);
+    }
+
+    async function superAdminResetAvatar() {
+        if (currentUser.role !== 'SUPER_ADMIN') return;
+        if (globalData.userProfiles[currentViewingUser]) {
+            globalData.userProfiles[currentViewingUser].avatar = DEFAULT_AVATAR;
+            await pushCloudData();
+        }
+        document.getElementById('pf-avatar').src = DEFAULT_AVATAR;
+        alert(`已强行重置玩家 ${currentViewingUser} 的违规头像！`);
+    }
+
+    async function toggleAdminRole() {
+        const targetName = document.getElementById('target-user-input').value.trim();
+        if (!targetName) return alert('请输入玩家昵称！');
+
+        if (globalData.admins.includes(targetName)) {
+            globalData.admins = globalData.admins.filter(n => n !== targetName);
+            alert(`已撤销 ${targetName} 的管理者身份！`);
+        } else {
+            globalData.admins.push(targetName);
+            alert(`已成功赋予 ${targetName} 管理者身份！`);
+        }
+        await pushCloudData();
+        document.getElementById('target-user-input').value = '';
+    }
+
+    function triggerAvatarUpload() { 
+        const input = document.getElementById('avatar-file-input');
+        if (input) input.click();
+    }
+
+    function handleAvatarChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                currentUser.avatar = e.target.result;
+                localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+                document.getElementById('user-avatar-img').src = e.target.result;
+
+                globalData.userProfiles[currentUser.nickname] = currentUser;
+                await pushCloudData();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    /* 序章对话流程 */
+    const storyData = {
+        start: {
+            speaker: "未知迷雾",
+            text: "醒来吧，来自...的灵魂。你睁开眼，面前站着一只头顶长着金色羊角、散发着幽光的山羊。",
+            options: [
+                { label: "你是谁？这里是什么地方？", next: "step1" },
+                { label: "（保持警惕，紧握双拳）", next: "step2" }
+            ]
+        },
+        step1: {
+            speaker: "神秘山羊",
+            text: "我是这片原野的引导者。神已沉睡，而世界的秩序正在崩塌...",
+            options: [
+                { label: "作为【阵营】的一员，我要重建这片大地！", next: "end" }
+            ]
+        },
+        step2: {
+            speaker: "神秘山羊",
+            text: "不必戒备，凡人。你的灵魂契约早已注定了你的归宿。",
+            options: [
+                { label: "顺应契约的召唤", next: "end" }
+            ]
+        },
+        end: {
+            speaker: "创世神谕",
+            text: "【序章契约试炼完成】你的选择已印入这片土地！",
+            options: [
+                { label: "完成试炼并进入主菜单", next: "finish" }
+            ]
+        }
+    };
+
+    function startPrologueGame(canSkipManual = false) {
+        document.getElementById('prologue-skip-btn').style.display = canSkipManual ? 'block' : 'none';
+        document.getElementById('prologue-modal').classList.add('active');
+        renderDialogue('start');
+    }
+
+    function exitPrologue() { 
+        document.getElementById('prologue-modal').classList.remove('active');
+        enterDashboard();
+    }
+
+    function renderDialogue(nodeKey) {
+        if (nodeKey === 'finish') {
+            currentUser.hasFinishedPrologue = true;
+            localStorage.setItem('soul_contract', JSON.stringify(currentUser));
+            exitPrologue();
+            return;
+        }
+        const node = storyData[nodeKey];
+        let text = node.text.replace('来自...', `来自【${currentUser.race}】`);
+        text = text.replace('【阵营】', currentUser.race);
+
+        document.getElementById('speaker-name').innerText = node.speaker;
+        document.getElementById('dialog-text').innerText = text;
+
+        const optBox = document.getElementById('options-container');
+        optBox.innerHTML = '';
+        node.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'dialog-opt-btn';
+            btn.innerText = opt.label;
+            btn.onclick = () => renderDialogue(opt.next);
+            optBox.appendChild(btn);
+        });
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+</script>
     </script>
 </body>
 </html>
