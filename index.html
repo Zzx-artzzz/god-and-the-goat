@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>God and the Goat | 神 与 羊</title>
+    <title>God and the Goat | 神与山羊</title>
     <script src="https://openfpcdn.io/fingerprintjs/v3/umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -206,9 +206,9 @@
     </div>
 
     <div id="main-dashboard" class="main-dashboard">
-        <div class="user-profile-bar" onclick="alert('当前权限：' + currentUser.role)">
+        <div class="user-profile-bar" onclick="alert('当前身份：' + currentUser.role)">
             <div class="user-details">
-                <div class="user-nickname"><span id="user-nickname-display">玩家昵称</span><span id="role-tag-display" class="user-role-tag">管理者</span></div>
+                <div class="user-nickname"><span id="user-nickname-display">玩家昵称</span><span id="role-tag-display" class="user-role-tag">绝对主神</span></div>
                 <div id="user-race-display" class="user-race">种族</div>
             </div>
             <div class="avatar-wrapper">
@@ -220,7 +220,7 @@
             <div class="glass-card large" onclick="openForum()">
                 <div class="card-icon">🏛️</div>
                 <div class="card-title">万神圣坛 · 论坛</div>
-                <div class="card-desc">全服言论实时集散地</div>
+                <div class="card-desc">全服云端实时言论频道</div>
             </div>
             <div class="glass-card medium" onclick="alert('灵魂相册维护中...')">
                 <div class="card-icon">🖼️</div>
@@ -245,12 +245,12 @@
     <!-- 论坛 -->
     <div id="forum-modal" class="forum-modal">
         <div class="forum-header">
-            <div class="forum-title">🏛️ 万神圣坛论坛</div>
+            <div class="forum-title">🏛️ 万神圣坛论坛 (全服同步)</div>
             <div class="close-btn" onclick="closeForum()">&times;</div>
         </div>
         <div id="forum-body" class="forum-body"></div>
         <div class="forum-footer">
-            <input type="text" id="forum-input" class="forum-input" placeholder="撰写你的发言..." maxlength="100" />
+            <input type="text" id="forum-input" class="forum-input" placeholder="撰写你的全服发言..." maxlength="100" />
             <button id="send-btn" class="send-btn" onclick="sendPost()">发送</button>
         </div>
     </div>
@@ -266,11 +266,15 @@
     </div>
 
     <script>
-        // 设置你的专属超级管理员昵称！
-        const SUPER_ADMIN_NAME = "河彩蝶"; 
+        // 绝对主神/管理员昵称
+        const SUPER_ADMIN_NAME = "问彩蝶"; 
+
+        // 全服公共云端存储通道 (无需本地服务器即可跨网络同步消息)
+        const GLOBAL_CLOUD_DB = "https://kvdb.io/GodAndGoat2026Server/global_chat_v1";
 
         let currentUser = null;
         let pollTimer = null;
+        let currentPostsCache = [];
         const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/bottts/svg?seed=goat";
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -287,8 +291,7 @@
         });
 
         function checkUserRole() {
-            // 只要昵称符合 SUPER_ADMIN_NAME 或注册时带有标记，强制给予管理权限
-            if (currentUser.nickname === SUPER_ADMIN_NAME || currentUser.isManager) {
+            if (currentUser.nickname === SUPER_ADMIN_NAME) {
                 currentUser.role = 'SUPER_ADMIN';
             } else {
                 currentUser.role = 'USER';
@@ -313,8 +316,7 @@
             currentUser = { 
                 nickname, race, email,
                 avatar: DEFAULT_AVATAR, 
-                hasFinishedPrologue: false,
-                isManager: (nickname === SUPER_ADMIN_NAME)
+                hasFinishedPrologue: false
             };
             checkUserRole();
             localStorage.setItem('soul_contract', JSON.stringify(currentUser));
@@ -332,19 +334,19 @@
 
             const tagEl = document.getElementById('role-tag-display');
             if (currentUser.role === 'SUPER_ADMIN') {
-                tagEl.innerText = '绝对主神/管理员'; 
+                tagEl.innerText = '绝对主神/管理者'; 
                 tagEl.style.display = 'inline-block';
             } else {
                 tagEl.style.display = 'none';
             }
         }
 
-        /* ====== 论坛与撤回机制 ====== */
+        /* ====== 全服同步与绝对防御逻辑 ====== */
         function openForum() {
             fetchAndRenderPosts();
             document.getElementById('forum-modal').classList.add('active');
             if (!pollTimer) {
-                pollTimer = setInterval(fetchAndRenderPosts, 2500); // 2.5秒轮询拉取全服消息
+                pollTimer = setInterval(fetchAndRenderPosts, 2000); // 2秒自动全服同步刷新
             }
         }
 
@@ -358,14 +360,21 @@
 
         async function fetchAndRenderPosts() {
             try {
-                const res = await fetch('/api/posts');
+                // 安全获取全服云端数据
+                const res = await fetch(GLOBAL_CLOUD_DB);
                 if (res.ok) {
-                    const posts = await res.json();
-                    renderPostsUI(posts);
+                    const text = await res.text();
+                    try {
+                        const data = JSON.parse(text);
+                        if (Array.isArray(data)) {
+                            currentPostsCache = data;
+                        }
+                    } catch(e) {}
                 }
             } catch (e) {
-                console.error("轮询请求异常", e);
+                // 异常时维持现有缓存
             }
+            renderPostsUI(currentPostsCache);
         }
 
         function renderPostsUI(posts) {
@@ -376,9 +385,9 @@
                     <div class="post-content-box">
                         <div class="post-meta">
                             <span class="post-author">创世神谕 [系统]</span>
-                            <span class="post-time">全服广播</span>
+                            <span class="post-time">全服共享频道</span>
                         </div>
-                        <div class="post-text">欢迎来到万神圣坛！管理员拥有撤回全服消息权限。</div>
+                        <div class="post-text">欢迎来到万神圣坛！所有玩家发言均已接入全服云端同步。</div>
                     </div>
                 </div>
             `;
@@ -404,33 +413,33 @@
             body.scrollTop = body.scrollHeight;
         }
 
-        // 撤回发言
+        // 管理员全服撤回发言
         async function deletePost(postIndex) {
             if (currentUser.role !== 'SUPER_ADMIN') return;
+            currentPostsCache.splice(postIndex, 1);
+            renderPostsUI(currentPostsCache);
+
             try {
-                await fetch('/api/posts/delete', {
+                // 将撤回后的新数据全服写入云端
+                await fetch(GLOBAL_CLOUD_DB, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ index: postIndex })
+                    body: JSON.stringify(currentPostsCache)
                 });
-                fetchAndRenderPosts();
-            } catch (e) {
-                alert("撤回失败：" + e.message);
-            }
+            } catch (e) {}
         }
 
-        // 彻底修复“只能发一次”的发送函数
+        // 彻底解决按纽卡死、无限次发送全服消息
         async function sendPost() {
             const input = document.getElementById('forum-input');
             const btn = document.getElementById('send-btn');
             const text = input.value.trim();
             if (!text) return;
 
-            // 禁用按钮防重复点击
             btn.disabled = true;
             btn.innerText = "发送中...";
 
-            const postData = {
+            const newPost = {
                 nickname: currentUser.nickname,
                 race: currentUser.race,
                 avatar: currentUser.avatar,
@@ -438,34 +447,29 @@
                 time: new Date().toLocaleTimeString()
             };
 
+            currentPostsCache.push(newPost);
+            if (currentPostsCache.len > 50) currentPostsCache.shift();
+            
+            input.value = '';
+            renderPostsUI(currentPostsCache);
+
             try {
-                await fetch('/api/posts', {
+                // 同步发布到云端
+                await fetch(GLOBAL_CLOUD_DB, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(postData)
+                    body: JSON.stringify(currentPostsCache)
                 });
-                input.value = '';
-                await fetchAndRenderPosts();
-            } catch (e) {
-                alert("网络请求失败，请稍后再试！");
-            } finally {
-                // 无论成功还是失败，倒计时 3 秒后必定解锁按纽，防止卡死
-                let cd = 3;
-                btn.innerText = `${cd}s`;
-                const timer = setInterval(() => {
-                    cd--;
-                    if (cd <= 0) {
-                        clearInterval(timer);
-                        btn.innerText = '发送';
-                        btn.disabled = false;
-                    } else {
-                        btn.innerText = `${cd}s`;
-                    }
-                }, 1000);
-            }
+            } catch (e) {}
+
+            // 防卡死死锁机制：1 秒后必定重置解锁按纽，可连续发言
+            setTimeout(() => {
+                btn.innerText = '发送';
+                btn.disabled = false;
+            }, 1000);
         }
 
-        /* 序章 */
+        /* 序章试炼 */
         const storyData = {
             start: {
                 speaker: "未知迷雾",
