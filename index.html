@@ -504,7 +504,7 @@
 
         const canDelete = (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN');
 
-        posts.forEach((p) => {
+        posts.slice().reverse().forEach((p) => {
             const adminControls = canDelete ? `<span class="admin-action-btn" onclick="deletePost(${p.id})">撤回</span>` : '';
 
             body.insertAdjacentHTML('beforeend', `
